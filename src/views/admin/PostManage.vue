@@ -87,7 +87,11 @@ const showComments = async(id) => {
 
       <el-table-column label="序号" width="60" type="index"></el-table-column>
       <el-table-column label="标题" prop="title"></el-table-column>
-      <el-table-column label="内容" prop="content" :show-overflow-tooltip="true"></el-table-column>
+      <el-table-column label="内容" :show-overflow-tooltip="true">
+        <template #default="{ row }">
+          <div v-html="row.content" class="content-preview"></div>
+        </template>
+      </el-table-column>
       <el-table-column label="发贴人用户名" prop="username"></el-table-column>
       <el-table-column label="发布时间" prop="postTime" :show-overflow-tooltip="true"></el-table-column>
       <el-table-column label="浏览量" prop="viewNum" width="80px"></el-table-column>
@@ -147,6 +151,13 @@ const showComments = async(id) => {
     align-items: center;
     justify-content: space-between;
   }
+}
+
+.content-preview {
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 抽屉样式 */

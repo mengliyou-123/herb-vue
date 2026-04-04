@@ -84,7 +84,11 @@ const backToPost = async() => {
     <el-table :data="comments" style="width: 100%">
 
       <el-table-column label="序号" type="index" width="100px"></el-table-column>
-      <el-table-column label="内容" prop="content" :show-overflow-tooltip="true"></el-table-column>
+      <el-table-column label="内容" :show-overflow-tooltip="true">
+        <template #default="{ row }">
+          <div v-html="row.content" class="content-preview"></div>
+        </template>
+      </el-table-column>
       <el-table-column label="评论人用户名" prop="username" :show-overflow-tooltip="true"></el-table-column>
       <!-- <el-table-column label="帖子id" prop="postId"></el-table-column> -->
       <!-- <el-table-column label="回复评论id" prop="replyCommentId"></el-table-column> -->
@@ -120,6 +124,13 @@ const backToPost = async() => {
     align-items: center;
     justify-content: space-between;
   }
+}
+
+.content-preview {
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 抽屉样式 */
