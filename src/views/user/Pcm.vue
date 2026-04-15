@@ -4,10 +4,8 @@ import { Search } from "@element-plus/icons-vue";
 import { pcmListService } from "@/api/pcm.js";
 import { pcmRecommendStreamService } from "@/api/recommend.js"
 import { useTokenStore } from "@/stores/token";
-import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 
-const router = useRouter();
 const tokenStore = useTokenStore();
 
 const dosageForm = ref("");
@@ -68,10 +66,6 @@ const pcmList = async () => {
 onMounted(() => {
   pcmList();
 });
-
-const pcmDetail = (id) => {
-  router.push({ path: "/user/pcmDetail", query: { id: id } });
-}
 
 const question = ref("");
 const answer = ref("");
@@ -141,44 +135,141 @@ const toggleTypeExpand = () => {
 
 <template>
   <div class="pcm-page">
-    <div class="hero-section">
-      <div class="hero-bg-decoration">
-        <div class="circle circle-1"></div>
-        <div class="circle circle-2"></div>
-        <div class="circle circle-3"></div>
+    <!-- 温暖药膳养生风格头部 -->
+    <div class="warmth-hero">
+      <!-- 背景装饰层 -->
+      <div class="warm-bg">
+        <!-- 温暖光晕 -->
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+
+        <!-- 蒸汽/热气效果 -->
+        <div class="steam-particles">
+          <span class="steam s1"></span>
+          <span class="steam s2"></span>
+          <span class="steam s3"></span>
+          <span class="steam s4"></span>
+          <span class="steam s5"></span>
+          <span class="steam s6"></span>
+        </div>
+
+        <!-- 温度波纹 -->
+        <svg class="temp-waves" viewBox="0 0 1200 120" preserveAspectRatio="none">
+          <path d="M0,60 Q150,30 300,60 T600,60 T900,60 T1200,60 L1200,120 L0,120 Z" fill="rgba(232, 168, 124, 0.08)" class="wave w1"/>
+          <path d="M0,70 Q200,40 400,70 T800,70 T1200,70 L1200,120 L0,120 Z" fill="rgba(212, 165, 116, 0.06)" class="wave w2"/>
+        </svg>
+
+        <!-- 药材点缀 -->
+        <div class="herb-spots">
+          <span class="spot spot-1">🫖</span>
+          <span class="spot spot-2">🍵</span>
+          <span class="spot spot-3">🌸</span>
+        </div>
       </div>
+
+      <!-- 主内容区 -->
       <div class="hero-content">
-        <div class="hero-left">
-          <div class="icon-wrapper">
-            <span class="main-icon">💊</span>
-            <div class="icon-ring"></div>
-            <div class="icon-pulse"></div>
+        <!-- 左侧药罐图标 -->
+        <div class="pot-section">
+          <div class="pot-glow"></div>
+          <div class="medicine-pot">
+            <div class="pot-body">
+              <div class="pot-lid"></div>
+              <div class="pot-handle left"></div>
+              <div class="pot-handle right"></div>
+              <div class="pot-inner">
+                <span class="pot-icon">💊</span>
+                <div class="pot-steam">
+                  <span class="vapor v1">~</span>
+                  <span class="vapor v2">~</span>
+                  <span class="vapor v3">~</span>
+                </div>
+              </div>
+            </div>
+            <div class="pot-base"></div>
+          </div>
+          <div class="pot-flame">
+            <span class="flame f1"></span>
+            <span class="flame f2"></span>
+            <span class="flame f3"></span>
           </div>
         </div>
-        <div class="hero-center">
-          <h1 class="hero-title">
-            <span class="title-text">中成药</span>
-            <span class="title-badge">收藏夹</span>
+
+        <!-- 中间标题信息 -->
+        <div class="title-section">
+          <!-- 顶部标签 -->
+          <div class="top-badges">
+            <span class="badge warm-badge">
+              <span class="badge-icon">🔥</span>
+              滋补养生
+            </span>
+            <span class="badge sub-badge">Chinese Patent Medicine</span>
+          </div>
+
+          <!-- 主标题 -->
+          <h1 class="main-title">
+            <span class="title-char" v-for="(char, index) in '中成药'.split('')" :key="index" :style="{ animationDelay: `${index * 0.2}s` }">{{ char }}</span>
           </h1>
-          <p class="hero-subtitle">传承千年智慧 · 便捷现代养生</p>
-          <div class="hero-stats">
-            <div class="stat-item">
-              <span class="stat-number">{{ total }}</span>
-              <span class="stat-label">种药品</span>
+
+          <!-- 副标题 -->
+          <p class="subtitle">
+            <span class="sub-text">千年传承 · 温润滋养 · 守护健康</span>
+          </p>
+
+          <!-- 数据展示 -->
+          <div class="data-cards">
+            <div class="data-card">
+              <div class="card-icon-wrap">
+                <span class="card-icon">💊</span>
+              </div>
+              <div class="card-info">
+                <span class="card-num">{{ total }}</span>
+                <span class="card-label">种药品</span>
+              </div>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item">
-              <span class="stat-number">{{ typeOptions.flat().length }}</span>
-              <span class="stat-label">个分类</span>
+            <div class="data-card">
+              <div class="card-icon-wrap">
+                <span class="card-icon">🏷️</span>
+              </div>
+              <div class="card-info">
+                <span class="card-num">{{ typeOptions.flat().length }}</span>
+                <span class="card-label">个分类</span>
+              </div>
+            </div>
+            <div class="data-card highlight">
+              <div class="card-icon-wrap">
+                <span class="card-icon">⚕️</span>
+              </div>
+              <div class="card-info">
+                <span class="card-num">AI</span>
+                <span class="card-label">智能推荐</span>
+              </div>
             </div>
           </div>
         </div>
-        <div class="hero-right">
-          <div class="decoration-pill">
-            <span class="pill-text">TCM</span>
+
+        <!-- 右侧温度计/养生元素 -->
+        <div class="wellness-section">
+          <div class="thermometer">
+            <div class="thermo-body">
+              <div class="thermo-fill" :style="{ height: '75%' }"></div>
+              <div class="thermo-bulb"></div>
+              <div class="thermo-scale">
+                <span class="scale-mark" v-for="i in 5" :key="i"></span>
+              </div>
+            </div>
+            <div class="thermo-label">温</div>
           </div>
-          <div class="decoration-dots">
-            <span></span><span></span><span></span>
+
+          <div class="wellness-icons">
+            <span class="w-icon w1" title="调理">🧘</span>
+            <span class="w-icon w2" title="滋养">🍯</span>
+            <span class="w-icon w3" title="平衡">☯️</span>
+          </div>
+
+          <div class="fortune-text">
+            <span class="fortune-char" v-for="(c, i) in '温补调和'.split('')" :key="i" :style="{ animationDelay: `${i * 0.35}s` }">{{ c }}</span>
           </div>
         </div>
       </div>
@@ -231,7 +322,7 @@ const toggleTypeExpand = () => {
                   :key="'more-'+t"
                   class="filter-tag"
                   :class="{ active: type === t }"
-                  @click="type = t; pageNum = 1; pcmList()"
+                  @click=" type = t; pageNum = 1; pcmList()"
                 >{{ t }}</span>
               </template>
             </div>
@@ -240,7 +331,7 @@ const toggleTypeExpand = () => {
 
         <div class="pcm-list" v-if="!loading && pcms.length > 0 && !error">
           <transition-group name="card-list" tag="div" class="cards-wrapper">
-            <div v-for="(p, index) in pcms" :key="p.id" class="pcm-card" @click="pcmDetail(p.id)" :style="{ animationDelay: `${index * 0.05}s` }">
+            <div v-for="(p, index) in pcms" :key="p.id" class="pcm-card" :style="{ animationDelay: `${index * 0.05}s` }">
               <div class="card-icon">💊</div>
               <div class="card-main">
                 <div class="card-header">
@@ -255,10 +346,8 @@ const toggleTypeExpand = () => {
                   <p class="card-usage"><span class="usage-icon">📋</span><span class="usage-label">用法用量：</span>{{ p.pcmUsage }}</p>
                 </div>
               </div>
-              <div class="card-arrow">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M9 18l6-6-6-6"/>
-                </svg>
+              <div class="card-status">
+                <span class="status-dot"></span>
               </div>
             </div>
           </transition-group>
@@ -353,7 +442,7 @@ const toggleTypeExpand = () => {
               <li>💡 使用上方搜索快速定位中成药</li>
               <li>🏷️ 通过类型标签精准筛选</li>
               <li>🤖 右侧AI助手可智能推荐用药</li>
-              <li>📖 点击卡片查看详细信息</li>
+              <li>🌡️ 中成药温和滋补，适合长期调理</li>
             </ul>
           </div>
         </div>
@@ -365,70 +454,236 @@ const toggleTypeExpand = () => {
 <style lang="scss" scoped>
 .pcm-page {
   min-height: 100%;
-  background: linear-gradient(180deg, #f8f6f3 0%, #faf9f7 50%, $bg-base 100%);
+  background: linear-gradient(180deg, #FFF9F5 0%, #FFF5EE 25%, #FFFBF7 50%, $bg-base 100%);
   position: relative;
 }
 
-.hero-section {
+// ==================== 关键帧动画定义（必须在顶层）====================
+
+@keyframes glowFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+  33% { transform: translate(-25px, -20px) scale(1.05); opacity: 1; }
+  66% { transform: translate(15px, 15px) scale(0.95); opacity: 0.85; }
+}
+
+@keyframes glowFloat2 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(20px, -18px); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+}
+
+@keyframes steamRise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  20% { opacity: 0.6; }
+  100% { transform: translateY(-80px) scale(1.8); opacity: 0; }
+}
+
+@keyframes waveMove {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-25px); }
+}
+
+@keyframes spotFloat1 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-12px, -10px) rotate(8deg); }
+}
+
+@keyframes spotFloat2 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(10px, -12px); }
+}
+
+@keyframes spotFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-8px, 8px) scale(1.1); }
+}
+
+@keyframes potGlow {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+}
+
+@keyframes potBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes iconSway {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(3deg); }
+}
+
+@keyframes vaporRise {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 0.8; transform: translateY(-6px); }
+}
+
+@keyframes flameFlicker {
+  from { transform: scaleY(1) scaleX(1); opacity: 0.9; }
+  to { transform: scaleY(1.2) scaleX(0.85); opacity: 1; }
+}
+
+@keyframes charWarmReveal {
+  from { opacity: 0; transform: translateY(25px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes underlineWarmGrow {
+  to { transform: scaleX(1); }
+}
+
+@keyframes thermoRise {
+  0%, 100% { height: 75% !important; }
+  50% { height: 85% !important; }
+}
+
+@keyframes wellIconBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes fortuneFadeIn {
+  from { opacity: 0; transform: scale(0.8) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ==================== 样式定义 ====================
+
+.warmth-hero {
   position: relative;
-  padding: 48px 40px 56px;
-  overflow: visible;
+  padding: 52px 40px 60px;
+  overflow: hidden;
   background: transparent;
 }
 
-.hero-bg-decoration {
+.warm-bg {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   pointer-events: none;
-  overflow: hidden;
 
-  .circle {
+  .glow-orb {
     position: absolute;
     border-radius: 50%;
-    opacity: 0.08;
+    filter: blur(80px);
 
-    &.circle-1 {
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, $color-primary 0%, transparent 70%);
-      top: -150px;
-      right: -100px;
-      animation: floatSlow 20s ease-in-out infinite;
+    &.orb-1 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(232, 168, 124, 0.25) 0%, transparent 70%);
+      top: -180px;
+      right: -120px;
+      animation: glowFloat1 18s ease-in-out infinite;
     }
 
-    &.circle-2 {
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, lighten($color-primary, 10%) 0%, transparent 70%);
-      bottom: -100px;
-      left: -80px;
-      animation: floatSlow 25s ease-in-out infinite reverse;
+    &.orb-2 {
+      width: 380px;
+      height: 380px;
+      background: radial-gradient(circle, rgba(245, 160, 100, 0.2) 0%, transparent 70%);
+      bottom: -120px;
+      left: -100px;
+      animation: glowFloat2 22s ease-in-out infinite reverse;
     }
 
-    &.circle-3 {
-      width: 200px;
-      height: 200px;
-      background: radial-gradient(circle, rgba($color-success, 0.5) 0%, transparent 70%);
-      top: 50%;
+    &.orb-3 {
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(255, 183, 77, 0.15) 0%, transparent 70%);
+      top: 45%;
       left: 50%;
       transform: translate(-50%, -50%);
-      animation: pulse 15s ease-in-out infinite;
+      animation: glowPulse 12s ease-in-out infinite;
     }
   }
-}
 
-@keyframes floatSlow {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
-}
+  .steam-particles {
+    .steam {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      animation: steamRise 4s ease-in-out infinite;
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.05; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 0.12; transform: translate(-50%, -50%) scale(1.2); }
+      &.s1 { bottom: 15%; left: 8%; width: 12px; height: 12px; animation-delay: 0s; }
+      &.s2 { bottom: 28%; left: 15%; animation-delay: 0.8s; }
+      &.s3 { bottom: 22%; right: 18%; width: 10px; height: 10px; animation-delay: 1.6s; }
+      &.s4 { bottom: 35%; right: 10%; animation-delay: 2.4s; }
+      &.s5 { top: 25%; left: 25%; animation-delay: 3.2s; }
+      &.s6 { top: 32%; right: 28%; animation-delay: 0.4s; }
+    }
+  }
+
+  .temp-waves {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100px;
+
+    .wave {
+      animation: waveMove 14s ease-in-out infinite;
+
+      &.w2 {
+        animation-duration: 18s;
+        animation-direction: reverse;
+      }
+    }
+  }
+
+  .herb-spots {
+    .spot {
+      position: absolute;
+      font-size: 36px;
+      opacity: 0.12;
+      filter: blur(0.5px);
+
+      &.spot-1 {
+        top: 18%;
+        right: 8%;
+        animation: spotFloat1 10s ease-in-out infinite;
+      }
+
+      &.spot-2 {
+        bottom: 28%;
+        left: 6%;
+        font-size: 28px;
+        animation: spotFloat2 13s ease-in-out infinite;
+      }
+
+      &.spot-3 {
+        top: 55%;
+        right: 22%;
+        font-size: 24px;
+        animation: spotFloat3 11s ease-in-out infinite;
+      }
+    }
+  }
 }
 
 .hero-content {
@@ -436,209 +691,381 @@ const toggleTypeExpand = () => {
   z-index: 1;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 32px;
+  gap: 44px;
   align-items: center;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.hero-left {
-  .icon-wrapper {
+.pot-section {
+  position: relative;
+
+  .pot-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle, rgba(255, 140, 66, 0.25) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: potGlow 3s ease-in-out infinite;
+  }
+
+  .medicine-pot {
     position: relative;
-    width: 120px;
-    height: 120px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    z-index: 2;
+    animation: potBounce 4s ease-in-out infinite;
+  }
 
-    .main-icon {
-      font-size: 64px;
-      position: relative;
-      z-index: 2;
-      filter: drop-shadow(0 4px 12px rgba($color-primary, 0.3));
-      animation: iconBounce 3s ease-in-out infinite;
-    }
+  .pot-body {
+    width: 110px;
+    height: 90px;
+    background: linear-gradient(180deg, #D4956E 0%, #C48B62 50%, #B87D54 100%);
+    border-radius: 12px 12px 20px 20px;
+    position: relative;
+    box-shadow:
+      inset 0 4px 8px rgba(255, 255, 255, 0.2),
+      inset 0 -4px 8px rgba(0, 0, 0, 0.15),
+      0 8px 24px rgba(184, 125, 84, 0.3);
 
-    .icon-ring {
+    .pot-lid {
       position: absolute;
-      top: 50%;
+      top: -12px;
       left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90px;
-      height: 90px;
-      border: 3px solid rgba($color-primary, 0.2);
-      border-radius: 50%;
-      animation: ringRotate 10s linear infinite;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 16px;
+      background: linear-gradient(180deg, #E8A87C 0%, #D4956E 100%);
+      border-radius: 8px 8px 4px 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     }
 
-    .icon-pulse {
+    .pot-handle {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 110px;
-      height: 110px;
-      border: 2px solid rgba($color-primary, 0.1);
-      border-radius: 50%;
-      animation: pulseRing 3s ease-in-out infinite;
-    }
-  }
-}
+      top: 20px;
+      width: 16px;
+      height: 40px;
+      background: linear-gradient(90deg, #C48B62, #D4A574, #C48B62);
+      border-radius: 8px;
+      box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
 
-@keyframes iconBounce {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-8px) rotate(-5deg); }
-  75% { transform: translateY(-4px) rotate(5deg); }
-}
-
-@keyframes ringRotate {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-@keyframes pulseRing {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.5; }
-}
-
-.hero-center {
-  .hero-title {
-    margin: 0 0 12px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-
-    .title-text {
-      font-size: 36px;
-      font-weight: 700;
-      color: $text-primary;
-      letter-spacing: 1px;
-      background: linear-gradient(135deg, $text-primary 0%, $color-primary 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      &.left { left: -10px; }
+      &.right { right: -10px; }
     }
 
-    .title-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 6px 16px;
-      background: linear-gradient(135deg, $color-primary, $color-primary-light);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: 20px;
-      box-shadow: 0 4px 12px rgba($color-primary, 0.3);
-      letter-spacing: 0.5px;
-    }
-  }
-
-  .hero-subtitle {
-    font-size: 16px;
-    color: $text-secondary;
-    margin: 0 0 20px;
-    font-weight: 400;
-    letter-spacing: 0.5px;
-
-    &::before,
-    &::after {
-      content: '·';
-      margin: 0 8px;
-      color: $color-primary;
-      opacity: 0.4;
-    }
-  }
-
-  .hero-stats {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    padding: 16px 24px;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    border-radius: 16px;
-    border: 1px solid rgba($color-primary, 0.1);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-    width: fit-content;
-
-    .stat-item {
+    .pot-inner {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      background: linear-gradient(180deg, #4A3728 0%, #3D2D20 100%);
+      border-radius: 8px 8px 14px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       gap: 4px;
 
-      .stat-number {
-        font-size: 28px;
-        font-weight: 700;
-        color: $color-primary;
-        line-height: 1;
+      .pot-icon {
+        font-size: 38px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        animation: iconSway 3s ease-in-out infinite;
       }
 
-      .stat-label {
-        font-size: 13px;
-        color: $text-secondary;
-        font-weight: 500;
+      .pot-steam {
+        display: flex;
+        gap: 6px;
+
+        .vapor {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 14px;
+          animation: vaporRise 2s ease-in-out infinite;
+
+          &.v1 { animation-delay: 0s; }
+          &.v2 { animation-delay: 0.4s; font-size: 11px; }
+          &.v3 { animation-delay: 0.8s; font-size: 16px; }
+        }
       }
     }
+  }
 
-    .stat-divider {
-      width: 1px;
-      height: 40px;
-      background: linear-gradient(180deg, transparent 0%, rgba($color-primary, 0.2) 50%, transparent 100%);
+  .pot-base {
+    width: 130px;
+    height: 14px;
+    background: linear-gradient(180deg, #8B6914 0%, #6B5210 100%);
+    border-radius: 0 0 8px 8px;
+    margin: -4px auto 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .pot-flame {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+
+    .flame {
+      width: 8px;
+      height: 16px;
+      background: linear-gradient(to top, #FF6B35, #F7931E, #FFD700);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      animation: flameFlicker 0.5s ease-in-out infinite alternate;
+
+      &.f1 { height: 18px; animation-delay: 0s; }
+      &.f2 { height: 14px; animation-delay: 0.15s; }
+      &.f3 { height: 12px; animation-delay: 0.3s; }
     }
   }
 }
 
-.hero-right {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
+.title-section {
+  .top-badges {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
 
-  .decoration-pill {
-    padding: 12px 28px;
-    background: linear-gradient(135deg, rgba($color-primary, 0.08), rgba($color-primary-light, 0.12));
-    border: 2px solid rgba($color-primary, 0.15);
-    border-radius: 30px;
-    transform: rotate(-3deg);
+    .warm-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      background: linear-gradient(135deg, #FF8C42, #FFA54F);
+      color: white;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(255, 140, 66, 0.35);
+      letter-spacing: 0.5px;
 
-    .pill-text {
-      font-size: 20px;
-      font-weight: 800;
-      color: $color-primary;
-      letter-spacing: 3px;
+      .badge-icon { font-size: 15px; }
+    }
+
+    .sub-badge {
+      font-size: 12px;
+      color: #C9915E;
+      font-weight: 500;
+      letter-spacing: 1px;
       font-style: italic;
     }
   }
 
-  .decoration-dots {
+  .main-title {
+    margin: 0 0 14px;
     display: flex;
     gap: 8px;
+    justify-content: center;
 
-    span {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: $color-primary;
-      opacity: 0.3;
-      animation: dotPulse 2s ease-in-out infinite;
+    .title-char {
+      font-size: 44px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #D4763C 0%, #E8945A 40%, #F5B77A 70%, #D4763C 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: inline-block;
+      animation: charWarmReveal 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+      position: relative;
 
-      &:nth-child(2) {
-        animation-delay: 0.3s;
-        opacity: 0.5;
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, #FF8C42, #F7931E, #FFD700);
+        border-radius: 2px;
+        transform: scaleX(0);
+        animation: underlineWarmGrow 0.6s ease forwards;
+        animation-delay: calc(var(--char-index, 0) * 0.2s + 0.6s);
+      }
+    }
+  }
+
+  .subtitle {
+    text-align: center;
+    margin: 0 0 24px;
+
+    .sub-text {
+      font-size: 15px;
+      color: #A67C52;
+      letter-spacing: 2px;
+      font-weight: 500;
+    }
+  }
+
+  .data-cards {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    .data-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      border: 1px solid rgba(232, 168, 124, 0.2);
+      box-shadow: 0 4px 16px rgba(212, 118, 60, 0.08);
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(212, 118, 60, 0.15);
+        border-color: rgba(232, 168, 124, 0.4);
       }
 
-      &:nth-child(3) {
-        animation-delay: 0.6s;
-        opacity: 0.7;
+      &.highlight {
+        background: linear-gradient(135deg, rgba(255, 140, 66, 0.1), rgba(255, 183, 77, 0.08));
+        border-color: rgba(255, 140, 66, 0.3);
+      }
+
+      .card-icon-wrap {
+        width: 42px;
+        height: 42px;
+        background: linear-gradient(135px, #FFE4CC, #FFD9BF);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .card-icon { font-size: 22px; }
+      }
+
+      .card-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        .card-num {
+          font-size: 24px;
+          font-weight: 800;
+          color: #D4763C;
+          line-height: 1;
+        }
+
+        .card-label {
+          font-size: 11px;
+          color: #A67C52;
+          font-weight: 500;
+        }
       }
     }
   }
 }
 
-@keyframes dotPulse {
-  0%, 100% { transform: scale(1); opacity: 0.3; }
-  50% { transform: scale(1.4); opacity: 0.8; }
+.wellness-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+
+  .thermometer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+
+    .thermo-body {
+      width: 24px;
+      height: 100px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 12px;
+      border: 2px solid rgba(212, 118, 60, 0.3);
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
+
+      .thermo-fill {
+        position: absolute;
+        bottom: 0;
+        left: 2px;
+        right: 2px;
+        background: linear-gradient(to top, #FF6B35, #F7931E, #FFD700);
+        border-radius: 0 0 8px 8px;
+        transition: height 1s ease;
+        animation: thermoRise 3s ease-in-out infinite;
+      }
+
+      .thermo-bulb {
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #FF6B35, #F7931E);
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
+      }
+
+      .thermo-scale {
+        position: absolute;
+        right: -8px;
+        top: 8px;
+        bottom: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+
+        .scale-mark {
+          width: 4px;
+          height: 4px;
+          background: rgba(212, 118, 60, 0.4);
+          border-radius: 50%;
+        }
+      }
+    }
+
+    .thermo-label {
+      font-family: "KaiTi", "STKaiti", serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #D4763C;
+    }
+  }
+
+  .wellness-icons {
+    display: flex;
+    gap: 12px;
+
+    .w-icon {
+      font-size: 26px;
+      animation: wellIconBounce 3s ease-in-out infinite;
+
+      &.w1 { animation-delay: 0s; }
+      &.w2 { animation-delay: 0.5s; }
+      &.w3 { animation-delay: 1s; }
+    }
+  }
+
+  .fortune-text {
+    display: flex;
+    gap: 6px;
+
+    .fortune-char {
+      font-family: "KaiTi", "STKaiti", serif;
+      font-size: 19px;
+      font-weight: 700;
+      color: #A67C52;
+      opacity: 0;
+      animation: fortuneFadeIn 1s ease forwards;
+    }
+
+    &:nth-child(1) .fortune-char { animation-delay: 1s; }
+    &:nth-child(2) .fortune-char { animation-delay: 1.35s; }
+    &:nth-child(3) .fortune-char { animation-delay: 1.7s; }
+    &:nth-child(4) .fortune-char { animation-delay: 2.05s; }
+  }
 }
 
 .page-body {
@@ -658,20 +1085,23 @@ const toggleTypeExpand = () => {
   display: flex;
   gap: 12px;
   margin-bottom: 20px;
+
   .el-input { flex: 1; }
+
   .el-button {
     width: 90px;
     height: 40px;
     border-radius: $radius-md;
-    background: $color-primary;
-    border-color: $color-primary;
+    background: linear-gradient(135deg, #FF8C42, #F7931E);
+    border: none;
+
     &:hover:not(:disabled) {
-      background: $color-primary-light;
-      border-color: $color-primary-light;
+      background: linear-gradient(135deg, #FA7A2A, #F08820);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 140, 66, 0.35);
     }
-    &:disabled {
-      opacity: 0.7;
-    }
+
+    &:disabled { opacity: 0.7; }
   }
 }
 
@@ -697,20 +1127,14 @@ const toggleTypeExpand = () => {
     align-items: center;
     gap: 6px;
 
-    .label-icon {
-      font-size: 16px;
-    }
-
-    .type-count {
-      font-size: 12px;
-      color: $color-primary;
-      font-weight: normal;
-    }
+    .label-icon { font-size: 16px; }
+    .type-count { font-size: 12px; color: #E8945A; font-weight: normal; }
   }
 
   .expand-btn {
     font-size: 13px;
     padding: 4px 8px;
+    color: #E8945A;
 
     .expand-icon {
       display: inline-block;
@@ -718,9 +1142,7 @@ const toggleTypeExpand = () => {
       transition: transform 0.3s ease;
       font-size: 10px;
 
-      &.expanded {
-        transform: rotate(180deg);
-      }
+      &.expanded { transform: rotate(180deg); }
     }
   }
 
@@ -736,9 +1158,9 @@ const toggleTypeExpand = () => {
     font-size: 13px;
     cursor: pointer;
     transition: all 0.25s ease;
-    background: $bg-base;
-    color: $text-secondary;
-    border: 1px solid $border-color;
+    background: #FFF9F5;
+    color: #A67C52;
+    border: 1px solid rgba(232, 148, 90, 0.2);
     position: relative;
     overflow: hidden;
 
@@ -750,62 +1172,38 @@ const toggleTypeExpand = () => {
       width: 0;
       height: 0;
       border-radius: 50%;
-      background: rgba($color-primary, 0.1);
+      background: rgba(255, 140, 66, 0.12);
       transform: translate(-50%, -50%);
-      transition: width 0.4s ease, height 0.4s ease;
+      transition: all 0.35s ease;
     }
 
     &:hover {
-      color: $color-primary;
-      border-color: $color-primary;
+      color: #D4763C;
+      border-color: #FF8C42;
       transform: translateY(-1px);
 
-      &::before {
-        width: 100%;
-        height: 100%;
-        padding-top: 100%;
-      }
+      &::before { width: 150%; height: 150%; padding-top: 150%; }
     }
 
     &.active {
-      background: linear-gradient(135deg, $color-primary, $color-primary-light);
+      background: linear-gradient(135deg, #FF8C42, #F7931E);
       color: #fff;
       border-color: transparent;
-      box-shadow: 0 2px 8px rgba($color-primary, 0.3);
+      box-shadow: 0 3px 10px rgba(255, 140, 66, 0.35);
       font-weight: 500;
 
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba($color-primary, 0.4);
-      }
+      &:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(255, 140, 66, 0.45); }
     }
   }
 }
 
 .filter-fade-enter-active,
-.filter-fade-leave-active {
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
+.filter-fade-leave-active { transition: all 0.3s ease; overflow: hidden; }
 .filter-fade-enter-from,
-.filter-fade-leave-to {
-  opacity: 0;
-  max-height: 0;
-  margin-top: 0;
-}
+.filter-fade-leave-to { opacity: 0; max-height: 0; margin-top: 0; }
 
-.pcm-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.cards-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+.pcm-list { display: flex; flex-direction: column; gap: 12px; }
+.cards-wrapper { display: flex; flex-direction: column; gap: 12px; }
 
 .pcm-card {
   display: flex;
@@ -813,7 +1211,7 @@ const toggleTypeExpand = () => {
   background: $bg-surface;
   border-radius: $radius-lg;
   padding: 20px 24px;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
   box-shadow: $shadow-sm;
@@ -828,33 +1226,20 @@ const toggleTypeExpand = () => {
     left: 0;
     width: 4px;
     height: 100%;
-    background: linear-gradient(180deg, $color-primary, $color-primary-light);
+    background: linear-gradient(180deg, #FF8C42, #F7931E, #FFD700);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
 
   &:hover {
-    transform: translateX(4px) translateY(-2px);
+    transform: translateY(-2px);
     box-shadow: $shadow-lg;
-    border-color: rgba($color-primary, 0.15);
-    background: lighten($bg-surface, 0.5%);
+    border-color: rgba(255, 140, 66, 0.2);
+    background: rgba(255, 255, 255, 0.95);
 
-    &::before {
-      opacity: 1;
-    }
-
-    .card-arrow {
-      opacity: 1;
-      transform: translateX(6px);
-    }
-
-    .card-icon {
-      transform: scale(1.1) rotate(5deg);
-    }
-  }
-
-  &:active {
-    transform: translateX(2px) translateY(0);
+    &::before { opacity: 1; }
+    .card-icon { transform: scale(1.1) rotate(5deg); }
+    .card-status .status-dot { background: #4CAF50; box-shadow: 0 0 8px rgba(76, 175, 80, 0.5); }
   }
 
   .card-icon {
@@ -862,7 +1247,7 @@ const toggleTypeExpand = () => {
     margin-right: 18px;
     flex-shrink: 0;
     transition: all 0.3s ease;
-    filter: drop-shadow(0 2px 4px rgba($color-primary, 0.15));
+    filter: drop-shadow(0 2px 4px rgba(212, 118, 60, 0.15));
   }
 
   .card-main {
@@ -886,9 +1271,7 @@ const toggleTypeExpand = () => {
     line-height: 1.3;
     transition: color 0.3s ease;
 
-    .pcm-card:hover & {
-      color: $color-primary;
-    }
+    .pcm-card:hover & { color: #D4763C; }
   }
 
   .card-meta {
@@ -902,16 +1285,15 @@ const toggleTypeExpand = () => {
       border-radius: 12px;
       font-size: 12px;
       font-weight: 500;
-      background: rgba($color-primary, 0.08);
-      color: $color-primary;
-      border: 1px solid rgba($color-primary, 0.15);
-      transition: all 0.3s ease;
+      background: rgba(255, 140, 66, 0.1);
+      color: #E8945A;
+      border: 1px solid rgba(255, 140, 66, 0.2);
     }
 
     .meta-type {
-      background: rgba($color-success, 0.08);
-      color: $color-success;
-      border-color: rgba($color-success, 0.15);
+      background: rgba(76, 175, 80, 0.1);
+      color: #4CAF50;
+      border-color: rgba(76, 175, 80, 0.2);
     }
   }
 
@@ -927,10 +1309,7 @@ const toggleTypeExpand = () => {
     -webkit-box-orient: vertical;
   }
 
-  .card-footer {
-    display: flex;
-    align-items: center;
-  }
+  .card-footer { display: flex; align-items: center; }
 
   .card-usage {
     font-size: 12px;
@@ -943,57 +1322,32 @@ const toggleTypeExpand = () => {
     align-items: center;
     gap: 6px;
 
-    .usage-icon {
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .usage-label {
-      font-weight: 500;
-      color: $text-secondary;
-      flex-shrink: 0;
-    }
+    .usage-icon { font-size: 14px; flex-shrink: 0; }
+    .usage-label { font-weight: 500; color: $text-secondary; flex-shrink: 0; }
   }
 
-  .card-arrow {
-    font-size: 20px;
-    color: $color-primary;
-    opacity: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  .card-status {
     flex-shrink: 0;
     margin-left: 16px;
     display: flex;
     align-items: center;
-  }
-}
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #E8945A;
+      transition: all 0.3s ease;
+    }
   }
 }
 
 .card-list-enter-active,
-.card-list-leave-active {
-  transition: all 0.3s ease;
-}
-
+.card-list-leave-active { transition: all 0.3s ease; }
 .card-list-enter-from,
-.card-list-leave-to {
-  opacity: 0;
-  transform: translateX(-10px);
-}
+.card-list-leave-to { opacity: 0; transform: translateX(-10px); }
 
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+.loading-state { display: flex; flex-direction: column; gap: 12px; }
 
 .skeleton-card {
   display: flex;
@@ -1007,7 +1361,7 @@ const toggleTypeExpand = () => {
     width: 48px;
     height: 48px;
     border-radius: $radius-md;
-    background: linear-gradient(90deg, $bg-base 25%, lighten($bg-base, 3%) 50%, $bg-base 75%);
+    background: linear-gradient(90deg, #FFF9F5 25%, #FFE8D6 50%, #FFF9F5 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     flex-shrink: 0;
@@ -1020,41 +1374,9 @@ const toggleTypeExpand = () => {
     gap: 10px;
   }
 
-  .skeleton-title {
-    height: 22px;
-    width: 35%;
-    border-radius: 4px;
-    background: linear-gradient(90deg, $bg-base 25%, lighten($bg-base, 3%) 50%, $bg-base 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-  }
-
-  .skeleton-meta {
-    height: 26px;
-    width: 45%;
-    border-radius: 13px;
-    background: linear-gradient(90deg, $bg-base 25%, lighten($bg-base, 3%) 50%, $bg-base 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-  }
-
-  .skeleton-text {
-    height: 14px;
-    width: 100%;
-    border-radius: 4px;
-    background: linear-gradient(90deg, $bg-base 25%, lighten($bg-base, 3%) 50%, $bg-base 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-
-    &.short {
-      width: 65%;
-    }
-  }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  .skeleton-title { height: 22px; width: 35%; border-radius: 4px; background: linear-gradient(90deg, #FFF9F5 25%, #FFE8D6 50%, #FFF9F5 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+  .skeleton-meta { height: 26px; width: 45%; border-radius: 13px; background: linear-gradient(90deg, #FFF9F5 25%, #FFE8D6 50%, #FFF9F5 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+  .skeleton-text { height: 14px; width: 100%; border-radius: 4px; background: linear-gradient(90deg, #FFF9F5 25%, #FFE8D6 50%, #FFF9F5 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; &.short { width: 65%; } }
 }
 
 .error-state {
@@ -1064,17 +1386,8 @@ const toggleTypeExpand = () => {
   border-radius: $radius-lg;
   box-shadow: $shadow-sm;
 
-  .error-icon {
-    font-size: 48px;
-    display: block;
-    margin-bottom: 16px;
-  }
-
-  .error-message {
-    color: $text-secondary;
-    font-size: 15px;
-    margin: 0 0 20px;
-  }
+  .error-icon { font-size: 48px; display: block; margin-bottom: 16px; }
+  .error-message { color: $text-secondary; font-size: 15px; margin: 0 0 20px; }
 }
 
 .empty-state {
@@ -1084,29 +1397,9 @@ const toggleTypeExpand = () => {
   border-radius: $radius-lg;
   box-shadow: $shadow-sm;
 
-  .empty-icon {
-    font-size: 56px;
-    display: block;
-    margin-bottom: 16px;
-    animation: bounce 2s infinite;
-  }
-
-  h3 {
-    color: $text-primary;
-    font-size: 18px;
-    margin: 0 0 8px;
-  }
-
-  p {
-    color: $text-placeholder;
-    font-size: 14px;
-    margin: 0 0 16px;
-  }
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  .empty-icon { font-size: 56px; display: block; margin-bottom: 16px; animation: bounce 2s infinite; }
+  h3 { color: $text-primary; font-size: 18px; margin: 0 0 8px; }
+  p { color: $text-placeholder; font-size: 14px; margin: 0 0 16px; }
 }
 
 .pagination-wrap {
@@ -1139,13 +1432,11 @@ const toggleTypeExpand = () => {
   overflow: hidden;
   transition: all 0.3s ease;
 
-  &:hover {
-    box-shadow: $shadow-md;
-  }
+  &:hover { box-shadow: $shadow-md; }
 }
 
 .panel-header {
-  background: $color-primary-gradient;
+  background: linear-gradient(135deg, #FF8C42, #F7931E);
   padding: 16px 20px;
   position: relative;
   overflow: hidden;
@@ -1157,63 +1448,42 @@ const toggleTypeExpand = () => {
     right: -50%;
     width: 100%;
     height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
   }
 
-  .panel-title {
-    color: #fff;
-    font-size: 15px;
-    font-weight: 600;
-    position: relative;
-    z-index: 1;
-  }
+  .panel-title { color: #fff; font-size: 15px; font-weight: 600; position: relative; z-index: 1; }
 
-  &.tips-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  }
+  &.tips-header { background: linear-gradient(135deg, #FFB347, #FF9933); }
 }
 
-.panel-body {
-  padding: 20px;
-}
+.panel-body { padding: 20px; }
 
 .recommend-input {
   margin-bottom: 14px;
+
   :deep(.el-input__wrapper) {
     border-radius: $radius-md;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     transition: all 0.3s ease;
 
-    &:focus {
-      box-shadow: 0 0 0 3px rgba($color-primary, 0.15), 0 2px 12px rgba(0,0,0,0.08);
-    }
+    &:focus { box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.15), 0 2px 12px rgba(0,0,0,0.08); }
   }
 }
 
 .recommend-btn {
   width: 100%;
   border-radius: $radius-md;
-  background: linear-gradient(135deg, $color-primary, $color-primary-light);
+  background: linear-gradient(135deg, #FF8C42, #F7931E);
   border: none;
   font-weight: 600;
   padding: 12px 20px;
   font-size: 14px;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba($color-primary, 0.25);
+  box-shadow: 0 4px 12px rgba(255, 140, 66, 0.25);
 
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba($color-primary, 0.35);
-  }
-
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
+  &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255, 140, 66, 0.35); }
+  &:active:not(:disabled) { transform: translateY(0); }
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
 }
 
 .result-section {
@@ -1222,15 +1492,13 @@ const toggleTypeExpand = () => {
   .result-label {
     font-size: 13px;
     font-weight: 600;
-    color: $color-primary;
+    color: #E8945A;
     margin-bottom: 10px;
     display: flex;
     align-items: center;
     gap: 6px;
 
-    .result-icon {
-      font-size: 14px;
-    }
+    .result-icon { font-size: 14px; }
   }
 }
 
@@ -1239,40 +1507,20 @@ const toggleTypeExpand = () => {
   max-height: 500px;
   overflow-y: auto;
   padding: 16px;
-  background: linear-gradient(135deg, lighten($bg-base, 1%) 0%, $bg-surface 100%);
+  background: linear-gradient(135deg, #FFF9F5 0%, #FFF5EE 100%);
   border-radius: $radius-md;
-  border-left: 4px solid $color-primary;
+  border-left: 4px solid #FF8C42;
   font-size: 13px;
   line-height: 1.8;
   color: $text-primary;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(255, 140, 66, 0.25); border-radius: 3px; &:hover { background: rgba(255, 140, 66, 0.4); } }
 
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba($color-primary, 0.2);
-    border-radius: 3px;
-
-    &:hover {
-      background: rgba($color-primary, 0.35);
-    }
-  }
-
-  :deep(strong) {
-    color: $color-primary;
-    font-weight: 600;
-    padding: 0 2px;
-  }
-
-  :deep(br) {
-    margin-bottom: 6px;
-  }
+  :deep(strong) { color: #E8945A; font-weight: 600; padding: 0 2px; }
+  :deep(br) { margin-bottom: 6px; }
 }
 
 .placeholder-box {
@@ -1282,24 +1530,17 @@ const toggleTypeExpand = () => {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border: 2px dashed $border-color;
+  border: 2px dashed rgba(232, 148, 90, 0.3);
   border-radius: $radius-md;
   font-size: 13px;
   color: $text-placeholder;
   text-align: center;
   padding: 20px;
-  background: linear-gradient(135deg, rgba($color-primary, 0.02) 0%, transparent 100%);
+  background: linear-gradient(135deg, rgba(255, 140, 66, 0.02) 0%, transparent 100%);
   transition: all 0.3s ease;
 
-  &:hover {
-    border-color: rgba($color-primary, 0.3);
-    background: linear-gradient(135deg, rgba($color-primary, 0.04) 0%, transparent 100%);
-  }
-
-  .placeholder-icon {
-    font-size: 32px;
-    opacity: 0.7;
-  }
+  &:hover { border-color: rgba(255, 140, 66, 0.5); background: linear-gradient(135deg, rgba(255, 140, 66, 0.04) 0%, transparent 100%); }
+  .placeholder-icon { font-size: 32px; opacity: 0.7; }
 }
 
 .loading-box {
@@ -1311,32 +1552,22 @@ const toggleTypeExpand = () => {
   gap: 14px;
   border: 1.5px solid $border-color;
   border-radius: $radius-md;
-  background: linear-gradient(135deg, rgba($color-primary, 0.02) 0%, transparent 100%);
+  background: linear-gradient(135deg, rgba(255, 140, 66, 0.02) 0%, transparent 100%);
 
-  span {
-    font-size: 13px;
-    color: $color-primary;
-    font-weight: 500;
-  }
+  span { font-size: 13px; color: #E8945A; font-weight: 500; }
 }
 
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba($color-primary, 0.15);
-  border-top-color: $color-primary;
+  border: 3px solid rgba(255, 140, 66, 0.15);
+  border-top-color: #FF8C42;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
 .tips-panel {
-  .tips-body {
-    padding: 16px 20px;
-  }
+  .tips-body { padding: 16px 20px; }
 
   .tips-list {
     list-style: none;
@@ -1351,216 +1582,62 @@ const toggleTypeExpand = () => {
       color: $text-secondary;
       line-height: 1.6;
       padding: 10px 14px;
-      background: linear-gradient(135deg, rgba($color-primary, 0.03) 0%, transparent 100%);
+      background: linear-gradient(135deg, rgba(255, 140, 66, 0.04) 0%, transparent 100%);
       border-radius: $radius-md;
-      border-left: 3px solid rgba($color-primary, 0.2);
+      border-left: 3px solid rgba(255, 140, 66, 0.25);
       transition: all 0.3s ease;
 
-      &:hover {
-        background: linear-gradient(135deg, rgba($color-primary, 0.06) 0%, transparent 100%);
-        border-left-color: $color-primary;
-        transform: translateX(4px);
-      }
+      &:hover { background: linear-gradient(135deg, rgba(255, 140, 66, 0.08) 0%, transparent 100%); border-left-color: #FF8C42; transform: translateX(4px); }
     }
   }
+}
+
+@media (max-width: 1200px) {
+  .warmth-hero { padding: 44px 32px 52px; }
+  .hero-content { gap: 32px; }
+  .pot-section .medicine-pot .pot-body { width: 95px; height: 82px; .pot-icon { font-size: 34px; } }
+  .title-section .main-title .title-char { font-size: 38px; }
+  .wellness-section .thermometer .thermo-body { height: 85px; }
 }
 
 @media (max-width: 1024px) {
-  .page-body {
-    gap: 20px;
-  }
-
-  .sidebar {
-    width: 340px;
-  }
-
-  .hero-section {
-    padding: 36px 24px 44px;
-  }
-
-  .hero-content {
-    gap: 24px;
-  }
-
-  .hero-left .icon-wrapper {
-    width: 100px;
-    height: 100px;
-
-    .main-icon {
-      font-size: 52px;
-    }
-
-    .icon-ring {
-      width: 75px;
-      height: 75px;
-    }
-
-    .icon-pulse {
-      width: 92px;
-      height: 92px;
-    }
-  }
-
-  .hero-center .hero-title .title-text {
-    font-size: 30px;
-  }
-
-  .hero-center .hero-stats {
-    padding: 14px 20px;
-
-    .stat-number {
-      font-size: 24px;
-    }
-  }
+  .page-body { flex-direction: column; }
+  .sidebar { width: 100%; }
 }
 
 @media (max-width: 768px) {
-  .page-body {
-    flex-direction: column;
-    padding: 16px;
-  }
+  .pcm-page { background: $bg-base; }
+  .warmth-hero { padding: 36px 20px 44px; }
+  .hero-content { grid-template-columns: 1fr; gap: 28px; text-align: center; }
 
-  .sidebar {
-    width: 100%;
-  }
-
-  .pcm-page {
-    background: $bg-base;
-  }
-
-  .hero-section {
-    padding: 32px 20px 40px;
-  }
-
-  .hero-content {
-    grid-template-columns: 1fr;
-    gap: 24px;
-    text-align: center;
-  }
-
-  .hero-left {
+  .pot-section {
     display: flex;
     justify-content: center;
-
-    .icon-wrapper {
-      width: 90px;
-      height: 90px;
-
-      .main-icon {
-        font-size: 48px;
-      }
-
-      .icon-ring {
-        width: 68px;
-        height: 68px;
-      }
-
-      .icon-pulse {
-        width: 82px;
-        height: 82px;
-      }
-    }
+    .medicine-pot .pot-body { width: 85px; height: 74px; .pot-icon { font-size: 30px; }
+    .pot-base { width: 105px; }
+    .pot-flame { display: none; }
   }
 
-  .hero-center {
-    .hero-title {
-      flex-direction: column;
-      gap: 10px;
-      justify-content: center;
-
-      .title-text {
-        font-size: 28px;
-      }
-
-      .title-badge {
-        font-size: 13px;
-        padding: 5px 14px;
-      }
-    }
-
-    .hero-subtitle {
-      font-size: 14px;
-    }
-
-    .hero-stats {
-      margin: 0 auto;
-      padding: 12px 20px;
-
-      .stat-item {
-        .stat-number {
-          font-size: 22px;
-        }
-
-        .stat-label {
-          font-size: 12px;
-        }
-      }
-
-      .stat-divider {
-        height: 35px;
-      }
-    }
+  .title-section {
+    .top-badges { justify-content: center; flex-wrap: wrap; }
+    .main-title { justify-content: center; .title-char { font-size: 32px; } }
+    .data-cards { justify-content: center; flex-wrap: wrap; .data-card { padding: 10px 16px; .card-num { font-size: 20px; } } }
   }
 
-  .hero-right {
-    flex-direction: row;
-    justify-content: center;
-    gap: 20px;
+  .wellness-section { flex-direction: row; justify-content: center; gap: 16px; .thermometer .thermo-body { height: 65px; } .fortune-text { font-size: 15px; } }
 
-    .decoration-pill {
-      transform: rotate(0deg);
-      padding: 8px 20px;
-
-      .pill-text {
-        font-size: 16px;
-      }
-    }
+  .warm-bg {
+    .glow-orb { display: none; }
+    .herb-spots .spot { display: none; }
+    .temp-waves { height: 50px; }
+    .steam-particles .steam { display: none; }
   }
 
-  .page-header {
-    padding: 24px 20px;
-
-    .header-icon {
-      font-size: 32px;
-    }
-
-    .header-text h1 {
-      font-size: 22px;
-    }
-  }
-
-  .pcm-card {
-    padding: 16px 18px;
-
-    .card-icon {
-      font-size: 28px;
-      margin-right: 14px;
-    }
-
-    .card-title {
-      font-size: 16px;
-    }
-
-    .card-desc {
-      -webkit-line-clamp: 1;
-    }
-  }
-
-  .search-bar {
-    flex-direction: column;
-
-    .el-button {
-      width: 100%;
-    }
-  }
-
-  .filter-section {
-    padding: 14px;
-  }
-
-  .filter-tag {
-    padding: 5px 12px;
-    font-size: 12px;
-  }
+  .page-body { flex-direction: column; padding: 16px; }
+  .sidebar { width: 100%; }
+  .pcm-card { padding: 16px 18px; .card-icon { font-size: 28px; margin-right: 14px; } .card-title { font-size: 16px; } .card-desc { -webkit-line-clamp: 1; } }
+  .search-bar { flex-direction: column; .el-button { width: 100%; } }
+  .filter-section { padding: 14px; }
+  .filter-tag { padding: 5px 12px; font-size: 12px; }
 }
-</style>
+}</style>

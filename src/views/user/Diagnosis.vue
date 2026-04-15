@@ -2,12 +2,15 @@
 import { ref, onMounted } from "vue";
 import { diagnosisStreamService, getDiagnosisHistoryService, deleteHistoryService } from "@/api/ai.js";
 import { ElMessage, ElMessageBox } from "element-plus";
+import VirtualDoctor from "@/components/VirtualDoctor.vue";
 
 const symptoms = ref("");
 const diagnosisResult = ref("");
 const loading = ref(false);
 const historyList = ref([]);
 const historyLoading = ref(false);
+const showVirtualDoctor = ref(false);
+const activeHistoryId = ref(null);
 
 onMounted(() => {
   loadHistory();
@@ -17,8 +20,7 @@ const loadHistory = async () => {
   historyLoading.value = true;
   try {
     let result = await getDiagnosisHistoryService();
-    historyList.value = result.data || [];
-    historyList.value = historyList.value.filter(item => item.type === 'diagnosis');
+    historyList.value = (result.data || []).filter(item => item.type === 'diagnosis');
   } catch (error) {
     console.error("加载历史记录失败", error);
   } finally {
@@ -28,13 +30,13 @@ const loadHistory = async () => {
 
 const formatText = (text) => {
   if (!text) return '';
-  let formatted = String(text);
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  formatted = formatted.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
-  formatted = formatted.replace(/^(\d+)\.\s+/gm, '<strong>$1.</strong> ');
-  formatted = formatted.replace(/^-\s+/gm, '• ');
-  formatted = formatted.replace(/\n+/g, '<br>');
-  return formatted;
+  let s = String(text);
+  s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+  s = s.replace(/^(\d+)\.\s+/gm, '<strong>$1.</strong> ');
+  s = s.replace(/^-\s+/gm, '• ');
+  s = s.replace(/\n+/g, '<br>');
+  return s;
 };
 
 const startDiagnosis = async () => {
@@ -47,9 +49,7 @@ const startDiagnosis = async () => {
   try {
     await diagnosisStreamService(
       symptoms.value,
-      (chunk) => {
-        diagnosisResult.value += chunk;
-      },
+      (chunk) => { diagnosisResult.value += chunk; },
       async () => {
         loading.value = false;
         symptoms.value = "";
@@ -60,7 +60,6 @@ const startDiagnosis = async () => {
         loading.value = false;
         diagnosisResult.value = "智能问诊失败，请稍后重试";
         ElMessage.error("智能问诊失败");
-        console.error(error);
       }
     );
   } catch (error) {
@@ -72,198 +71,351 @@ const startDiagnosis = async () => {
 
 const deleteHistoryItem = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这条问诊记录吗？', '提示', {
-      confirmButtonText: '确定',
+    await ElMessageBox.confirm('确定要删除这条记录吗？', '确认', {
+      confirmButtonText: '删除',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger'
     });
     await deleteHistoryService(id);
-    ElMessage.success("删除成功");
+    ElMessage.success("已删除");
     await loadHistory();
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error("删除失败");
-    }
+    if (error !== 'cancel') ElMessage.error("删除失败");
   }
 };
 
 const formatTime = (timeStr) => {
   if (!timeStr) return '';
-  const date = new Date(timeStr);
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const d = new Date(timeStr);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hour = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${month}/${day} ${hour}:${min}`;
 };
 
 const quickQuestions = [
-  '感冒发热', '头痛头晕', '咳嗽痰多', '胃痛腹胀',
-  '失眠多梦', '腰膝酸软', '食欲不振', '便秘腹泻',
-  '手脚冰凉', '口干舌燥', '疲劳乏力', '皮肤过敏'
+  { text: '感冒发热', icon: '🤒' },
+  { text: '头痛头晕', icon: '😵' },
+  { text: '咳嗽痰多', icon: '😷' },
+  { text: '胃痛腹胀', icon: '🤢' },
+  { text: '失眠多梦', icon: '😩' },
+  { text: '腰膝酸软', icon: '🦴' },
+  { text: '食欲不振', icon: '😣' },
+  { text: '手脚冰凉', icon: '🥶' },
+  { text: '疲劳乏力', icon: '😫' },
+  { text: '口干舌燥', icon: '🏜️' },
 ];
 
 const quickQuestion = (question) => {
   symptoms.value = question;
   startDiagnosis();
 };
+
+const viewHistory = (item) => {
+  activeHistoryId.value = item.id;
+  diagnosisResult.value = item.answer;
+  symptoms.value = item.question;
+};
 </script>
 
 <template>
-  <div class="diagnosis-page">
-    <div class="page-header">
-      <div class="header-content">
-        <span class="header-icon">🏥</span>
-        <div class="header-text">
-          <h1>智能问诊</h1>
-          <p>AI 辅助中医辨证，为您提供健康参考建议</p>
-        </div>
+  <div class="diag-page">
+    <!-- 顶部 -->
+    <header class="diag-hero">
+      <div class="hero-bg">
+        <div class="hero-ink ink-1"></div>
+        <div class="hero-ink ink-2"></div>
+        <div class="hero-ink ink-3"></div>
       </div>
-    </div>
+      <div class="hero-inner">
+        <div class="hero-left">
+          <div class="hero-badge">AI 智能辨证</div>
+          <h1 class="hero-title">智能问诊</h1>
+          <p class="hero-desc">基于中医辨证论治体系，AI 辅助分析症状，提供个性化健康参考</p>
+        </div>
+        <button class="hero-video-btn" @click="showVirtualDoctor = true">
+          <div class="video-btn-glow"></div>
+          <span class="video-btn-icon">👨‍⚕️</span>
+          <div class="video-btn-text">
+            <span class="video-btn-title">视频问诊</span>
+            <span class="video-btn-sub">与老中医面对面</span>
+          </div>
+          <span class="video-btn-arrow">→</span>
+        </button>
+      </div>
+    </header>
 
-    <div class="page-body">
-      <div class="main-area">
-        <div class="input-card">
-          <div class="card-title-bar">
-            <span class="title-icon">✍️</span>
-            <span>症状描述</span>
+    <VirtualDoctor :show="showVirtualDoctor" @close="showVirtualDoctor = false" />
+
+    <!-- 主体 -->
+    <div class="diag-body">
+      <!-- 左侧主区域 -->
+      <div class="diag-main">
+        <!-- 输入区 -->
+        <div class="diag-card input-section">
+          <div class="section-label">
+            <span class="label-dot"></span>
+            <span>描述您的症状</span>
           </div>
           <el-input
             v-model="symptoms"
             type="textarea"
-            :rows="5"
-            placeholder="请详细描述您的症状，例如：头痛、发热、咳嗽、痰黄稠、口渴、咽痛等"
-            class="symptoms-input"
+            :rows="4"
+            placeholder="请详细描述您的症状，如：头痛、发热、咳嗽、痰黄稠、口渴、咽痛…"
+            class="sym-input"
           />
-          <el-button
-            @click="startDiagnosis()"
-            type="primary"
-            class="diagnose-btn"
-            :loading="loading"
-            :disabled="loading"
-          >
-            <template #loading>问诊中...</template>
-            {{ loading ? '' : '开始问诊' }}
-          </el-button>
+          <div class="input-footer">
+            <span class="input-hint">💡 描述越详细，辨证越准确</span>
+            <el-button
+              @click="startDiagnosis()"
+              type="primary"
+              class="diag-btn"
+              :loading="loading"
+              :disabled="loading || !symptoms.trim()"
+            >
+              <template #loading>
+                <span class="btn-loading-dot"></span>
+                辨证分析中
+              </template>
+              {{ loading ? '' : '开始辨证' }}
+            </el-button>
+          </div>
         </div>
 
-        <div class="quick-card" v-if="!diagnosisResult && !loading">
-          <div class="card-title-bar">
-            <span class="title-icon">⚡</span>
-            <span>常见症状快速提问</span>
+        <!-- 快捷提问 -->
+        <div class="diag-card quick-section" v-if="!diagnosisResult && !loading">
+          <div class="section-label">
+            <span class="label-dot"></span>
+            <span>常见症状</span>
           </div>
-          <div class="quick-tags">
-            <span
+          <div class="quick-grid">
+            <button
               v-for="q in quickQuestions"
-              :key="q"
-              class="quick-tag"
-              @click="quickQuestion(q)"
-            >{{ q }}</span>
+              :key="q.text"
+              class="quick-item"
+              @click="quickQuestion(q.text)"
+            >
+              <span class="quick-icon">{{ q.icon }}</span>
+              <span class="quick-text">{{ q.text }}</span>
+            </button>
           </div>
         </div>
 
-        <div class="result-card" v-if="diagnosisResult || loading">
-          <div class="card-title-bar">
-            <span class="title-icon">📋</span>
-            <span>诊断结果</span>
-            <span v-if="loading" class="result-badge analyzing">分析中...</span>
-            <span v-else class="result-badge done">已完成</span>
+        <!-- 结果区 -->
+        <div class="diag-card result-section" v-if="diagnosisResult || loading">
+          <div class="section-label">
+            <span class="label-dot" :class="{ active: !loading }"></span>
+            <span>辨证结果</span>
+            <span v-if="loading" class="result-status analyzing">
+              <span class="status-dot"></span>分析中
+            </span>
+            <span v-else class="result-status done">✓ 已完成</span>
           </div>
-          <div v-if="loading && !diagnosisResult" class="loading-box">
-            <div class="pulse-ring"></div>
-            <div class="pulse-ring delay"></div>
-            <div class="pulse-center"></div>
-            <p class="loading-text">正在连接AI服务，请稍候...</p>
+
+          <div v-if="loading && !diagnosisResult" class="loading-area">
+            <div class="loading-anim">
+              <svg class="loading-svg" viewBox="0 0 50 50">
+                <circle class="loading-path" cx="25" cy="25" r="20" fill="none" stroke-width="3" />
+              </svg>
+            </div>
+            <p class="loading-label">AI 正在辨证分析…</p>
           </div>
-          <div
-            v-else
-            class="result-content"
-            v-html="formatText(diagnosisResult)"
-          ></div>
+
+          <div v-else class="result-body" v-html="formatText(diagnosisResult)"></div>
         </div>
 
-        <div class="disclaimer">
-          <span class="disclaimer-icon">⚠️</span>
-          <p>本系统提供的诊断结果仅供参考，不能替代专业医生的诊断。如有严重症状，请及时就医。</p>
+        <!-- 免责 -->
+        <div class="diag-disclaimer">
+          <span>⚠️</span>
+          <p>本系统提供的辨证结果仅供参考，不能替代专业医师诊断。如有严重症状，请及时就医。</p>
         </div>
       </div>
 
-      <div class="sidebar">
-        <div class="panel history-panel">
-          <div class="panel-header">
-            <span class="panel-title">📜 问诊历史</span>
-            <el-button size="small" link @click="loadHistory">刷新</el-button>
+      <!-- 右侧历史 -->
+      <aside class="diag-aside">
+        <div class="aside-inner">
+          <div class="aside-head">
+            <h3>问诊记录</h3>
+            <button class="aside-refresh" @click="loadHistory" :class="{ spinning: historyLoading }">↻</button>
           </div>
-          <div class="panel-body scrollable">
-            <el-skeleton v-if="historyLoading" :rows="4" animated />
-            <div v-else-if="historyList.length === 0" class="empty-text">
-              <span class="empty-icon">📭</span>
-              暂无问诊记录
+
+          <div class="aside-body">
+            <el-skeleton v-if="historyLoading" :rows="3" animated />
+            <div v-else-if="historyList.length === 0" class="aside-empty">
+              <span class="empty-icon">📋</span>
+              <span>暂无记录</span>
             </div>
             <div v-else class="history-list">
               <div
                 v-for="item in historyList"
                 :key="item.id"
-                class="history-item"
+                class="hist-card"
+                :class="{ active: activeHistoryId === item.id }"
+                @click="viewHistory(item)"
               >
-                <div class="hist-top">
+                <div class="hist-head">
                   <span class="hist-time">{{ formatTime(item.createTime) }}</span>
-                  <el-button size="small" link type="danger" @click="deleteHistoryItem(item.id)">删除</el-button>
+                  <button class="hist-del" @click.stop="deleteHistoryItem(item.id)">✕</button>
                 </div>
-                <div class="hist-q"><span class="lbl">症状：</span>{{ item.question }}</div>
-                <div class="hist-a" v-html="formatText(item.answer)"></div>
+                <div class="hist-question">{{ item.question }}</div>
+                <div class="hist-preview">{{ item.answer?.substring(0, 60) }}…</div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </aside>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.diagnosis-page {
+.diag-page {
   min-height: 100%;
   background: $bg-base;
 }
 
-.page-header {
+/* ====== Hero ====== */
+.diag-hero {
+  position: relative;
   background: $color-primary-gradient;
-  padding: 32px 40px;
-  .header-content {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    .header-icon {
-      font-size: 42px;
-    }
-    .header-text {
-      h1 {
-        color: #fff;
-        font-size: 26px;
-        margin: 0 0 6px;
-        letter-spacing: 2px;
-      }
-      p {
-        color: rgba(255,255,255,0.8);
-        font-size: 14px;
-        margin: 0;
-      }
-    }
-  }
+  padding: 36px 40px;
+  overflow: hidden;
 }
 
-.page-body {
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero-ink {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.06;
+  background: #fff;
+}
+
+.ink-1 { width: 300px; height: 300px; top: -120px; right: -60px; }
+.ink-2 { width: 200px; height: 200px; bottom: -80px; left: 10%; }
+.ink-3 { width: 120px; height: 120px; top: 20px; right: 30%; opacity: 0.04; }
+
+.hero-inner {
+  position: relative;
   display: flex;
-  gap: 24px;
-  padding: 24px;
+  align-items: center;
+  justify-content: space-between;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.main-area {
+.hero-left {
+  .hero-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.9);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    backdrop-filter: blur(4px);
+  }
+
+  .hero-title {
+    color: #fff;
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 8px;
+    letter-spacing: 3px;
+  }
+
+  .hero-desc {
+    color: rgba(255,255,255,0.7);
+    font-size: 14px;
+    margin: 0;
+    letter-spacing: 0.5px;
+  }
+}
+
+.hero-video-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+
+  .video-btn-glow {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(193,68,67,0.3), rgba(232,90,89,0.15));
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(193,68,67,0.3);
+    border-color: rgba(255,255,255,0.35);
+
+    .video-btn-glow { opacity: 1; }
+    .video-btn-arrow { transform: translateX(4px); }
+  }
+
+  .video-btn-icon {
+    font-size: 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .video-btn-text {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+
+    .video-btn-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .video-btn-sub {
+      font-size: 11px;
+      opacity: 0.75;
+      margin-top: 2px;
+    }
+  }
+
+  .video-btn-arrow {
+    font-size: 20px;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.3s;
+    opacity: 0.7;
+  }
+}
+
+/* ====== Body ====== */
+.diag-body {
+  display: flex;
+  gap: 24px;
+  padding: 28px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.diag-main {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -271,297 +423,456 @@ const quickQuestion = (question) => {
   gap: 20px;
 }
 
-.sidebar {
-  width: 380px;
-  flex-shrink: 0;
-}
-
-.input-card,
-.quick-card,
-.result-card {
+/* ====== Card ====== */
+.diag-card {
   background: $bg-surface;
-  border-radius: $radius-lg;
-  padding: 22px 26px;
+  border-radius: 16px;
+  padding: 24px;
   box-shadow: $shadow-sm;
-}
+  border: 1px solid $border-light;
+  transition: box-shadow 0.3s;
 
-.card-title-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: $text-primary;
-  margin-bottom: 14px;
-  .title-icon {
-    font-size: 18px;
+  &:hover {
+    box-shadow: $shadow-md;
   }
 }
 
-.symptoms-input {
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: $text-primary;
   margin-bottom: 16px;
-  :deep(.el-textarea__inner) {
-    border-radius: $radius-md;
-    border: 1.5px solid $border-color;
-    font-size: 14px;
-    line-height: 1.6;
-    resize: none;
-    &:focus {
-      border-color: $color-primary;
-      box-shadow: 0 0 0 3px rgba($color-primary, 0.1);
+
+  .label-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $color-primary;
+    transition: all 0.3s;
+
+    &.active {
+      background: $color-success;
+      box-shadow: 0 0 8px rgba($color-success, 0.4);
     }
   }
 }
 
-.diagnose-btn {
-  width: 100%;
-  height: 46px;
-  border-radius: $radius-md;
+/* ====== Input ====== */
+.sym-input {
+  :deep(.el-textarea__inner) {
+    border-radius: 12px;
+    border: 1.5px solid $border-color;
+    font-size: 14px;
+    line-height: 1.7;
+    resize: none;
+    background: $bg-warm;
+    padding: 14px 16px;
+    transition: all 0.3s;
+
+    &:focus {
+      border-color: $color-primary;
+      box-shadow: 0 0 0 3px rgba($color-primary, 0.08);
+      background: #fff;
+    }
+
+    &::placeholder {
+      color: $text-placeholder;
+    }
+  }
+}
+
+.input-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+
+  .input-hint {
+    font-size: 12px;
+    color: $text-muted;
+  }
+}
+
+.diag-btn {
+  height: 42px;
+  padding: 0 32px;
+  border-radius: 10px;
   background: $color-primary;
   border-color: $color-primary;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 2px;
-  transition: all 0.3s ease;
-  &:hover {
+  letter-spacing: 1px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover:not(:disabled) {
     background: $color-primary-light;
     border-color: $color-primary-light;
     transform: translateY(-1px);
     box-shadow: $shadow-md;
   }
+
+  &:disabled {
+    opacity: 0.5;
+  }
 }
 
-.quick-tags {
-  display: flex;
-  flex-wrap: wrap;
+.btn-loading-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  margin-right: 8px;
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ====== Quick ====== */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
-.quick-tag {
-  padding: 7px 18px;
-  border-radius: 20px;
-  font-size: 13px;
+.quick-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: $bg-warm;
+  border: 1px solid $border-light;
   cursor: pointer;
-  transition: all 0.25s ease;
-  background: lighten($bg-base, 1%);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
   color: $text-secondary;
-  border: 1.5px solid $border-color;
+
+  .quick-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .quick-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   &:hover {
     background: $color-primary;
     color: #fff;
     border-color: $color-primary;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba($color-primary, 0.25);
+    box-shadow: 0 4px 12px rgba($color-primary, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 }
 
-.result-badge {
+/* ====== Result ====== */
+.result-status {
   margin-left: auto;
   font-size: 12px;
   font-weight: 500;
   padding: 3px 12px;
-  border-radius: 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
   &.analyzing {
-    background: rgba($color-accent, 0.08);
+    background: rgba($color-accent, 0.06);
     color: $color-accent;
-    animation: pulse-badge 1.5s ease infinite;
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: $color-accent;
+      animation: dot-pulse 1.2s ease-in-out infinite;
+    }
   }
+
   &.done {
-    background: rgba($color-success, 0.08);
+    background: rgba($color-success, 0.06);
     color: $color-success;
   }
 }
 
-@keyframes pulse-badge {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.loading-box {
+.loading-area {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 50px 0;
-  position: relative;
-  min-height: 180px;
+  padding: 48px 0;
 }
 
-.pulse-ring,
-.pulse-center {
-  position: absolute;
-  border-radius: 50%;
-  border: 3px solid transparent;
+.loading-svg {
+  width: 48px;
+  height: 48px;
+  animation: loading-rotate 1.4s linear infinite;
 }
 
-.pulse-ring {
-  width: 80px;
-  height: 80px;
-  border-top-color: $color-primary;
-  animation: pulse-spin 1.5s linear infinite;
-  opacity: 0.3;
+.loading-path {
+  stroke: $color-primary;
+  stroke-linecap: round;
+  stroke-dasharray: 90, 150;
+  stroke-dashoffset: 0;
+  animation: loading-dash 1.4s ease-in-out infinite;
 }
 
-.pulse-ring.delay {
-  width: 60px;
-  height: 60px;
-  border-right-color: $color-primary-light;
-  animation: pulse-spin 1.5s linear infinite reverse;
-  animation-delay: 0.3s;
-  opacity: 0.5;
+@keyframes loading-rotate {
+  100% { transform: rotate(360deg); }
 }
 
-.pulse-center {
-  width: 30px;
-  height: 30px;
-  background: $color-primary;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+@keyframes loading-dash {
+  0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+  50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
 }
 
-@keyframes pulse-spin {
-  to { transform: rotate(360deg); }
+.loading-label {
+  margin-top: 18px;
+  font-size: 13px;
+  color: $text-muted;
+  letter-spacing: 0.5px;
 }
 
-.loading-text {
-  margin-top: 70px;
+.result-body {
+  padding: 20px;
+  background: $bg-warm;
+  border-radius: 12px;
+  border-left: 3px solid $color-primary;
   font-size: 14px;
-  color: $color-primary;
-  font-weight: 500;
-}
-
-.result-content {
-  min-height: 150px;
-  max-height: 500px;
-  overflow-y: auto;
-  padding: 18px;
-  background: lighten($bg-base, 1%);
-  border-radius: $radius-md;
-  border-left: 4px solid $color-primary;
-  font-size: 14px;
-  line-height: 1.8;
+  line-height: 1.85;
   color: $text-primary;
-  &::-webkit-scrollbar { width: 5px; }
+  max-height: 480px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 4px; }
   &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: rgba($color-primary, 0.3); border-radius: 3px; }
-  :deep(strong) { color: $color-primary; font-weight: 700; }
+  &::-webkit-scrollbar-thumb { background: rgba($color-primary, 0.2); border-radius: 2px; }
+
+  :deep(strong) {
+    color: $color-primary;
+    font-weight: 700;
+  }
 }
 
-.disclaimer {
+/* ====== Disclaimer ====== */
+.diag-disclaimer {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 16px 20px;
-  background: rgba($color-accent, 0.04);
-  border: 1px solid rgba($color-accent, 0.15);
-  border-radius: $radius-md;
-  .disclaimer-icon {
-    font-size: 18px;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba($color-accent, 0.03);
+  border: 1px solid rgba($color-accent, 0.1);
+  border-radius: 10px;
+
+  span {
+    font-size: 14px;
     flex-shrink: 0;
     margin-top: 1px;
   }
+
   p {
-    font-size: 13px;
-    color: $text-secondary;
+    font-size: 12px;
+    color: $text-muted;
     line-height: 1.6;
     margin: 0;
   }
 }
 
-.panel {
-  background: $bg-surface;
-  border-radius: $radius-lg;
-  box-shadow: $shadow-sm;
-  overflow: hidden;
+/* ====== Aside ====== */
+.diag-aside {
+  width: 340px;
+  flex-shrink: 0;
 }
 
-.panel-header {
-  background: $color-primary-gradient;
-  padding: 14px 18px;
+.aside-inner {
+  background: $bg-surface;
+  border-radius: 16px;
+  border: 1px solid $border-light;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  position: sticky;
+  top: 24px;
+}
+
+.aside-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  .panel-title {
-    color: #fff;
+  padding: 16px 20px;
+  border-bottom: 1px solid $border-light;
+
+  h3 {
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
+    color: $text-primary;
+    margin: 0;
+    letter-spacing: 0.5px;
   }
 }
 
-.panel-body {
-  padding: 16px;
+.aside-refresh {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: $bg-warm;
+  border: 1px solid $border-light;
+  cursor: pointer;
+  font-size: 14px;
+  color: $text-muted;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+
+  &:hover {
+    background: $color-primary;
+    color: #fff;
+    border-color: $color-primary;
+  }
+
+  &.spinning {
+    animation: spin 0.8s linear infinite;
+  }
 }
 
-.scrollable {
-  max-height: calc(100vh - 320px);
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.aside-body {
+  padding: 12px;
+  max-height: calc(100vh - 240px);
   overflow-y: auto;
+
   &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: rgba($color-primary, 0.3); border-radius: 2px; }
+  &::-webkit-scrollbar-thumb { background: rgba($color-primary, 0.15); border-radius: 2px; }
 }
 
-.empty-text {
-  text-align: center;
-  padding: 40px 0;
-  color: $text-placeholder;
-  font-size: 13px;
+.aside-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  .empty-icon { font-size: 32px; }
+  padding: 40px 0;
+  color: $text-placeholder;
+  font-size: 13px;
+
+  .empty-icon { font-size: 28px; opacity: 0.6; }
 }
 
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.history-item {
-  background: lighten($bg-base, 1%);
-  border-radius: $radius-md;
-  padding: 14px;
-  border: 1px solid $border-color;
-  transition: box-shadow 0.2s;
-  &:hover { box-shadow: $shadow-sm; }
-  .hist-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    .hist-time { font-size: 11px; color: $text-placeholder; }
+.hist-card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: $bg-warm;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.25s;
+
+  &:hover {
+    border-color: $border-color;
+    box-shadow: $shadow-sm;
   }
-  .hist-q {
-    font-size: 13px;
-    color: $text-secondary;
-    margin-bottom: 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    .lbl { font-weight: 600; color: $color-primary; }
-  }
-  .hist-a {
-    font-size: 12px;
-    color: $text-primary;
-    line-height: 1.6;
-    background: $bg-surface;
-    padding: 10px;
-    border-radius: $radius-sm;
-    border-left: 3px solid $color-primary;
-    max-height: 120px;
-    overflow-y: auto;
-    :deep(strong) { color: $color-primary; font-weight: 600; }
+
+  &.active {
+    border-color: $color-primary;
+    background: rgba($color-primary, 0.04);
   }
 }
 
-@media (max-width: 768px) {
-  .page-body {
-    flex-direction: column;
-    padding: 16px;
+.hist-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.hist-time {
+  font-size: 11px;
+  color: $text-placeholder;
+  font-variant-numeric: tabular-nums;
+}
+
+.hist-del {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: $text-placeholder;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+
+  .hist-card:hover & {
+    opacity: 1;
   }
-  .sidebar {
-    width: 100%;
+
+  &:hover {
+    background: rgba($color-accent, 0.1);
+    color: $color-accent;
   }
+}
+
+.hist-question {
+  font-size: 13px;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hist-preview {
+  font-size: 12px;
+  color: $text-muted;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 900px) {
+  .diag-hero { padding: 24px 20px; }
+
+  .hero-inner { flex-direction: column; gap: 16px; align-items: flex-start; }
+
+  .hero-video-btn { align-self: stretch; justify-content: center; }
+
+  .diag-body { flex-direction: column; padding: 16px; }
+
+  .diag-aside { width: 100%; }
+
+  .aside-inner { position: static; }
+
+  .quick-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .quick-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

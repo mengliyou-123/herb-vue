@@ -68,7 +68,6 @@
           <el-menu-item index="/user/diagnosis" class="menu-item-custom menu-item-highlight">
             <el-icon><FirstAidKit/></el-icon>
             <span>智能问诊</span>
-            <span class="menu-badge">AI</span>
           </el-menu-item>
         </template>
 
@@ -484,19 +483,6 @@ const handleCommand = (command) => {
     .menu-item-highlight {
       position: relative;
 
-      .menu-badge {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: $color-accent;
-        color: white;
-        font-size: 10px;
-        font-weight: 700;
-        padding: 2px 6px;
-        border-radius: $radius-full;
-        letter-spacing: 0.5px;
-      }
     }
 
     // 子菜单

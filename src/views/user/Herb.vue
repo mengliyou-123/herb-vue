@@ -77,7 +77,7 @@ const herbDetail = async (id) => {
   router.push({ path: "/user/herbDetail", query: { id: id } });
 };
 
-const story = async (index) => {
+const viewStory = async (index) => {
   await router.push({ path: "/user/herbStories", query: { index: index } });
 }
 </script>
@@ -331,7 +331,7 @@ const story = async (index) => {
               ]" 
               :key="story.id"
               class="story-item"
-              @click="story(story.id)"
+              @click="viewStory(story.id)"
             >
               <span class="story-number">{{ String(story.id).padStart(2, '0') }}</span>
               <span class="story-title">{{ story.title }}</span>

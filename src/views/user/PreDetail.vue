@@ -103,7 +103,7 @@ const deleteCollection = async () => {
 }
 
 const backToPre = async () => {
-  await router.back();
+  await router.push({ path: "/user/prescription" });
 };
 </script>
 

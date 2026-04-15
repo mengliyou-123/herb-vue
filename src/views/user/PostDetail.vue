@@ -105,7 +105,7 @@ const deleteCollection = async () => {
 
 //返回
 const backToForum = async () => {
-  await router.back();
+  await router.push({ path: "/user/forum" });
 };
 
 //根据id找到发评论者的信息
@@ -190,6 +190,7 @@ const reply = async() => {
 </script>
 
 <template>
+  <div>
   <el-card class="page-container">
     <template #header>
       <div class="header">
@@ -376,6 +377,7 @@ const reply = async() => {
 
     </el-form>
   </el-drawer>
+  </div>
 </template>
 
 <style lang="scss" scoped>

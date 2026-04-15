@@ -16,7 +16,7 @@ import {useUserInfoStore} from "@/stores/userInfo";
 const router = useRouter();
 
 const backToBook = async () => {
-  await router.back();
+  await router.push({ path: "/user/book" });
 };
 
 //获取query携带的典籍id
