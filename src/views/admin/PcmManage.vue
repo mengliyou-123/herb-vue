@@ -120,7 +120,8 @@ const deletePcm = async (row) => {
 </script>
 
 <template>
-  <el-card class="page-container">
+  <div class="pcm-manage-page">
+    <el-card class="page-container">
     <template #header>
       <div class="header">
         <span>中成药管理</span>
@@ -293,6 +294,7 @@ const deletePcm = async (row) => {
       </el-form-item>
     </el-form>
   </el-drawer>
+  </div>
 </template>
 <style lang="scss" scoped>
 .page-container {

@@ -119,7 +119,8 @@ const deletePre = (row) => {
 </script>
 
 <template>
-  <el-card class="page-container">
+  <div class="pre-manage-page">
+    <el-card class="page-container">
     <template #header>
       <div class="header">
         <span>方剂管理</span>
@@ -305,6 +306,7 @@ const deletePre = (row) => {
       </el-form-item>
     </el-form>
   </el-drawer>
+  </div>
 </template>
 <style lang="scss" scoped>
 .page-container {

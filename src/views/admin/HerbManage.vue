@@ -157,7 +157,8 @@ const deleteHerb = (row) => {
 </script>
 
 <template>
-  <el-card class="page-container">
+  <div class="herb-manage-page">
+    <el-card class="page-container">
     <template #header>
       <div class="header">
         <span>中药管理</span>
@@ -410,6 +411,7 @@ const deleteHerb = (row) => {
       </el-form-item>
     </el-form>
   </el-drawer>
+  </div>
 </template>
 <style lang="scss" scoped>
 .page-container {

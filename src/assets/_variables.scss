@@ -1,0 +1,83 @@
+// ============================================
+// 🎨 百草居 - 设计变量 (Design Variables)
+// ============================================
+
+// ---- 色彩系统 Color System ----
+
+// 主色调 - 墨韵棕系 (Ink Brown)
+$color-primary: #6B4423;
+$color-primary-light: #8B5E3C;
+$color-primary-lighter: #A67C52;
+$color-primary-dark: #4A2F18;
+$color-primary-gradient: linear-gradient(135deg, #6B4423 0%, #8B5E3C 50%, #A67C52 100%);
+
+// 辅助色 - 自然绿 (Herbal Green)
+$color-success: #2D5016;
+$color-success-light: #4A7C2C;
+$color-success-bg: rgba(45, 80, 22, 0.08);
+
+// 点缀色 - 朱砂红 (Vermilion Red)
+$color-accent: #C14443;
+$color-accent-light: #E85A59;
+$color-accent-bg: rgba(193, 68, 67, 0.08);
+
+// 中性色 - 墨色系 (Ink Tones)
+$text-primary: #2C2416;
+$text-secondary: #6B5D4D;
+$text-muted: #9B8B7A;
+$text-light: #BFB0A0;
+$text-placeholder: #C4B8AA;
+
+// 背景色 - 宣纸色系 (Rice Paper)
+$bg-base: #FAF8F5;
+$bg-warm: #FFF9F0;
+$bg-surface: #FFFFFF;
+$bg-overlay: rgba(250, 248, 245, 0.95);
+
+// 边框色
+$border-color: rgba(107, 68, 35, 0.18);
+$border-light: rgba(107, 68, 35, 0.12);
+$border-default: rgba(107, 68, 35, 0.2);
+$border-strong: rgba(107, 68, 35, 0.3);
+
+// 阴影系统 - 层次感 (Shadow Hierarchy)
+$shadow-sm: 0 1px 3px rgba(44, 36, 22, 0.04), 0 1px 2px rgba(44, 36, 22, 0.06);
+$shadow-md: 0 4px 12px rgba(44, 36, 22, 0.08), 0 2px 4px rgba(44, 36, 22, 0.06);
+$shadow-lg: 0 10px 30px rgba(44, 36, 22, 0.12), 0 4px 8px rgba(44, 36, 22, 0.08);
+$shadow-xl: 0 20px 50px rgba(44, 36, 22, 0.15), 0 8px 16px rgba(44, 36, 22, 0.1);
+$shadow-glow: 0 0 20px rgba(107, 68, 35, 0.15);
+
+// 圆角系统 (Border Radius)
+$radius-sm: 6px;
+$radius-md: 10px;
+$radius-lg: 16px;
+$radius-xl: 24px;
+$radius-full: 9999px;
+
+// 过渡动画 (Transitions)
+$transition-fast: 0.15s ease;
+$transition-normal: 0.25s ease;
+$transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+// 字体系统 (Typography)
+$font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+$font-size-xs: 12px;
+$font-size-sm: 13px;
+$font-size-base: 14px;
+$font-size-md: 15px;
+$font-size-lg: 17px;
+$font-size-xl: 20px;
+$font-size-2xl: 24px;
+$font-size-3xl: 30px;
+$line-height-tight: 1.3;
+$line-height-normal: 1.6;
+$line-height-relaxed: 1.8;
+
+// 间距系统 (Spacing)
+$space-xs: 4px;
+$space-sm: 8px;
+$space-md: 16px;
+$space-lg: 24px;
+$space-xl: 32px;
+$space-2xl: 48px;
+$space-3xl: 64px;

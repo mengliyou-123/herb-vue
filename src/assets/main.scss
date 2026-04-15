@@ -1,20 +1,155 @@
-body {
+// ============================================
+// 🎨 百草居 - 现代新中式设计系统
+// Modern Chinese Medicine Aesthetic System
+// ============================================
+
+@use "./variables" as *;
+
+// ============================================
+// 全局样式 Global Styles
+// ============================================
+
+* {
   margin: 0;
-  background-color: #f5f5f5;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* fade-slide */
+html {
+  font-size: $font-size-base;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: $font-family;
+  color: $text-primary;
+  background-color: $bg-base;
+  line-height: $line-height-normal;
+  overflow-x: hidden;
+}
+
+// ---- 滚动条美化 Scrollbar Styling ----
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(107, 68, 35, 0.25);
+  border-radius: $radius-full;
+
+  &:hover {
+    background: rgba(107, 68, 35, 0.4);
+  }
+}
+
+// ---- 选择文本样式 Selection ----
+::selection {
+  background-color: rgba(107, 68, 35, 0.15);
+  color: $text-primary;
+}
+
+// ---- 链接样式 Links ----
+a {
+  color: $color-primary;
+  text-decoration: none;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $color-primary-light;
+  }
+}
+
+// ---- 图片响应式 Images ----
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+// ============================================
+// 动画效果 Animations
+// ============================================
+
+// 淡入滑动 (Fade Slide)
 .fade-slide-leave-active,
 .fade-slide-enter-active {
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fade-slide-enter-from {
-  transform: translateX(-30px);
+  transform: translateX(-20px);
   opacity: 0;
 }
 
 .fade-slide-leave-to {
-  transform: translateX(30px);
+  transform: translateX(20px);
   opacity: 0;
+}
+
+// 淡入缩放 (Fade Scale)
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// 渐入上升 (Fade Up)
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 微光闪烁 (Shimmer)
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// ============================================
+// 工具类 Utility Classes
+// ============================================
+
+.text-gradient {
+  background: $color-primary-gradient;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.hover-lift {
+  transition: transform $transition-normal, box-shadow $transition-normal;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: $shadow-lg;
+  }
 }

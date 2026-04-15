@@ -11,20 +11,18 @@ const routes = [
     redirect: '/user/herb',
     component: () => import('@/views/Layout.vue'),
     children: [
-      { 
-        path: '/mine/info', 
+      {
+        path: '/mine/info',
         component: () => import('@/views/mine/UserInfo.vue'),
-        meta: { title: '个人信息' }
+        meta: { title: '个人中心' }
       },
-      { 
-        path: '/mine/avatar', 
-        component: () => import('@/views/mine/UserAvatar.vue'),
-        meta: { title: '更换头像' }
+      {
+        path: '/mine/avatar',
+        redirect: '/mine/info'
       },
-      { 
-        path: '/mine/resetPassword', 
-        component: () => import('@/views/mine/UserResetPassword.vue'),
-        meta: { title: '重置密码' }
+      {
+        path: '/mine/resetPassword',
+        redirect: '/mine/info'
       },
       { 
         path: '/mine/collections', 

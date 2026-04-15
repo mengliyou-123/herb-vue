@@ -138,7 +138,8 @@ const showChapters = async(id) => {
 </script>
 
 <template>
-  <el-card class="page-container">
+  <div class="book-manage-page">
+    <el-card class="page-container">
     <template #header>
       <div class="header">
         <span>中医典籍管理</span>
@@ -304,6 +305,7 @@ const showChapters = async(id) => {
       </el-form-item>
     </el-form>
   </el-drawer>
+  </div>
 </template>
 <style lang="scss" scoped>
 .page-container {
