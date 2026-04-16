@@ -139,6 +139,21 @@ const routes = [
         component: () => import('@/views/user/Diagnosis.vue'),
         meta: { title: '智能问诊' }
       },
+      { 
+        path: '/user/herb-recognition', 
+        component: () => import('@/views/user/HerbRecognition.vue'),
+        meta: { title: 'AI 中草药识别' }
+      },
+      { 
+        path: '/user/tongue-diagnosis', 
+        component: () => import('@/views/user/TongueDiagnosis.vue'),
+        meta: { title: 'AI 舌诊体质自测' }
+      },
+      { 
+        path: '/user/knowledge-graph', 
+        component: () => import('@/views/user/KnowledgeGraph.vue'),
+        meta: { title: '知识图谱' }
+      },
     ]
   },
 ]

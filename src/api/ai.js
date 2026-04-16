@@ -188,3 +188,109 @@ export const diagnosisStreamService = async (symptoms, onMessage, onComplete, on
         onError && onError(error);
     }
 };
+
+export const herbRecognitionStreamService = async (imageUrl, onMessage, onComplete, onError) => {
+    const tokenStore = useTokenStore();
+    const token = tokenStore.token;
+    
+    const url = '/api/ai/herb-recognition-stream';
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': token,
+                'Accept': 'text/event-stream',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ imageUrl })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            
+            for (const line of lines) {
+                if (line.startsWith('data:')) {
+                    const data = line.slice(5).trim();
+                    if (data === '[DONE]') {
+                        onComplete && onComplete();
+                        return;
+                    }
+                    if (data) {
+                        onMessage && onMessage(data);
+                    }
+                }
+            }
+        }
+        
+        onComplete && onComplete();
+    } catch (error) {
+        onError && onError(error);
+    }
+};
+
+export const tongueDiagnosisStreamService = async (imageUrl, onMessage, onComplete, onError) => {
+    const tokenStore = useTokenStore();
+    const token = tokenStore.token;
+    
+    const url = '/api/ai/tongue-diagnosis-stream';
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': token,
+                'Accept': 'text/event-stream',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ imageUrl })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            
+            for (const line of lines) {
+                if (line.startsWith('data:')) {
+                    const data = line.slice(5).trim();
+                    if (data === '[DONE]') {
+                        onComplete && onComplete();
+                        return;
+                    }
+                    if (data) {
+                        onMessage && onMessage(data);
+                    }
+                }
+            }
+        }
+        
+        onComplete && onComplete();
+    } catch (error) {
+        onError && onError(error);
+    }
+};

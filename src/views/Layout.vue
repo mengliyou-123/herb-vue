@@ -69,6 +69,21 @@
             <el-icon><FirstAidKit/></el-icon>
             <span>智能问诊</span>
           </el-menu-item>
+
+          <el-menu-item index="/user/herb-recognition" class="menu-item-custom menu-item-highlight">
+            <el-icon><Aim/></el-icon>
+            <span>AI 识药</span>
+          </el-menu-item>
+
+          <el-menu-item index="/user/tongue-diagnosis" class="menu-item-custom menu-item-highlight">
+            <el-icon><MagicStick/></el-icon>
+            <span>AI 舌诊</span>
+          </el-menu-item>
+
+          <el-menu-item index="/user/knowledge-graph" class="menu-item-custom menu-item-highlight">
+            <el-icon><Connection/></el-icon>
+            <span>知识图谱</span>
+          </el-menu-item>
         </template>
 
         <!-- 管理员菜单组 -->
@@ -229,7 +244,10 @@ import {
   Setting,
   Star,
   Menu,
-  FirstAidKit
+  FirstAidKit,
+  Aim,
+  MagicStick,
+  Connection
 } from '@element-plus/icons-vue'
 import avatar from '@/assets/default.png'
 import { userInfoService } from "@/api/user";
@@ -256,6 +274,9 @@ const pageTitle = computed(() => {
     '/user/book': '藏经阁',
     '/user/forum': '老茶馆',
     '/user/diagnosis': '智能问诊',
+    '/user/herb-recognition': 'AI 中草药识别',
+    '/user/tongue-diagnosis': 'AI 舌诊体质自测',
+    '/user/knowledge-graph': '知识图谱',
     '/admin/herb': '中药材管理',
     '/admin/pre': '方剂管理',
     '/admin/pcm': '中成药管理',

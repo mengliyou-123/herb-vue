@@ -1,30 +1,66 @@
 <script setup>
-import { ref, onMounted } from "vue";
-import { diagnosisStreamService, getDiagnosisHistoryService, deleteHistoryService } from "@/api/ai.js";
+import { ref } from "vue";
+import { tongueDiagnosisStreamService, getDiagnosisHistoryService, deleteHistoryService } from "@/api/ai.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import VirtualDoctor from "@/components/VirtualDoctor.vue";
+import { Plus, Delete, Refresh } from "@element-plus/icons-vue";
+import request from "@/utils/request.js";
 
-const symptoms = ref("");
+const previewUrl = ref("");
+const uploadedUrl = ref("");
 const diagnosisResult = ref("");
 const loading = ref(false);
+const uploading = ref(false);
 const historyList = ref([]);
 const historyLoading = ref(false);
-const showVirtualDoctor = ref(false);
 const activeHistoryId = ref(null);
-
-onMounted(() => {
-  loadHistory();
-});
 
 const loadHistory = async () => {
   historyLoading.value = true;
   try {
     let result = await getDiagnosisHistoryService();
-    historyList.value = (result.data || []).filter(item => item.type === 'diagnosis');
+    historyList.value = (result.data || []).filter(item => item.type === 'tongue_diagnosis');
   } catch (error) {
     console.error("加载历史记录失败", error);
   } finally {
     historyLoading.value = false;
+  }
+};
+
+loadHistory();
+
+const handleFileChange = async (file) => {
+  const rawFile = file.raw || file;
+  if (!rawFile) return;
+  
+  if (!rawFile.type.startsWith('image/')) {
+    ElMessage.warning("请上传图片文件");
+    return;
+  }
+  
+  if (rawFile.size > 5 * 1024 * 1024) {
+    ElMessage.warning("图片大小不能超过5MB");
+    return;
+  }
+
+  previewUrl.value = URL.createObjectURL(rawFile);
+  uploadedUrl.value = "";
+  diagnosisResult.value = "";
+  
+  uploading.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('file', rawFile);
+    const result = await request.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    uploadedUrl.value = result.data;
+    ElMessage.success("图片上传成功");
+  } catch (error) {
+    console.error("图片上传失败", error);
+    ElMessage.error("图片上传失败");
+    previewUrl.value = "";
+  } finally {
+    uploading.value = false;
   }
 };
 
@@ -40,32 +76,31 @@ const formatText = (text) => {
 };
 
 const startDiagnosis = async () => {
-  if (!symptoms.value.trim()) {
-    ElMessage.warning("请输入症状描述");
+  if (!uploadedUrl.value) {
+    ElMessage.warning("请先上传舌部照片");
     return;
   }
   loading.value = true;
   diagnosisResult.value = "";
   try {
-    await diagnosisStreamService(
-      symptoms.value,
+    await tongueDiagnosisStreamService(
+      uploadedUrl.value,
       (chunk) => { diagnosisResult.value += chunk; },
       async () => {
         loading.value = false;
-        symptoms.value = "";
         await loadHistory();
-        ElMessage.success("问诊完成");
+        ElMessage.success("舌诊分析完成");
       },
       (error) => {
         loading.value = false;
-        diagnosisResult.value = "智能问诊失败，请稍后重试";
-        ElMessage.error("智能问诊失败");
+        diagnosisResult.value = "分析失败，请稍后重试";
+        ElMessage.error("分析失败");
       }
     );
   } catch (error) {
     loading.value = false;
-    diagnosisResult.value = "智能问诊失败，请稍后重试";
-    ElMessage.error("智能问诊失败");
+    diagnosisResult.value = "分析失败，请稍后重试";
+    ElMessage.error("分析失败");
   }
 };
 
@@ -92,189 +127,131 @@ const formatTime = (timeStr) => {
   const day = String(d.getDate()).padStart(2, '0');
   const hour = String(d.getHours()).padStart(2, '0');
   const min = String(d.getMinutes()).padStart(2, '0');
-  return `${month}/${day} ${hour}:${min}`;
-};
-
-const quickQuestions = [
-  { text: '感冒发热', icon: '🤒' },
-  { text: '头痛头晕', icon: '😵' },
-  { text: '咳嗽痰多', icon: '😷' },
-  { text: '胃痛腹胀', icon: '🤢' },
-  { text: '失眠多梦', icon: '😩' },
-  { text: '腰膝酸软', icon: '🦴' },
-  { text: '食欲不振', icon: '😣' },
-  { text: '手脚冰凉', icon: '🥶' },
-];
-
-const quickQuestion = (question) => {
-  symptoms.value = question;
-  startDiagnosis();
+  return `${month}/${day} ${hour}:${min}`
 };
 
 const viewHistory = (item) => {
   activeHistoryId.value = item.id;
   diagnosisResult.value = item.answer;
-  symptoms.value = item.question;
+  previewUrl.value = item.question;
+  uploadedUrl.value = item.question;
+};
+
+const clearImage = () => {
+  previewUrl.value = "";
+  uploadedUrl.value = "";
+  diagnosisResult.value = "";
 };
 </script>
 
 <template>
-  <div class="diagnosis-page">
-    <!-- 背景装饰层 -->
+  <div class="tongue-diagnosis-page">
     <div class="bg-decoration">
       <div class="gradient-orb orb1"></div>
       <div class="gradient-orb orb2"></div>
       <div class="gradient-orb orb3"></div>
       <div class="floating-elements">
-        <span class="float-item leaf1">🌿</span>
-        <span class="float-item leaf2">🍃</span>
-        <span class="float-item yin-yang">☯️</span>
-        <span class="float-item herb">🌸</span>
+        <span class="float-item leaf1">👅</span>
+        <span class="float-item leaf2">🍵</span>
+        <span class="float-item yin-yang">☯</span>
+        <span class="float-item herb">🌿</span>
         <span class="float-item pill">💊</span>
       </div>
       <div class="dot-pattern"></div>
     </div>
 
-    <!-- 头部区域 -->
     <header class="page-header">
       <div class="header-content">
         <div class="header-icon">
-          <span class="icon-main">⚕️</span>
+          <span class="icon-main">👅</span>
           <div class="icon-ring ring-a"></div>
           <div class="icon-ring ring-b"></div>
         </div>
-        <h1 class="page-title">智能问诊</h1>
-        <p class="page-subtitle">融合千年中医智慧 · AI 精准辨证论治</p>
+        <h1 class="page-title">AI 舌诊体质自测</h1>
+        <p class="page-subtitle">拍照识舌象 · AI 辨体质 · 个性化养生方案</p>
         <div class="header-tags">
-          <span class="tag"><i>✓</i> 秒级响应</span>
-          <span class="tag"><i>✓</i> 专业辨证</span>
-          <span class="tag"><i>✓</i> 隐私安全</span>
+          <span class="tag"><i>✓</i> 舌象分析</span>
+          <span class="tag"><i>✓</i> 体质辨识</span>
+          <span class="tag"><i>✓</i> 养生方案</span>
         </div>
       </div>
     </header>
 
-    <!-- 视频问诊核心亮点 -->
-    <section class="video-section">
-      <div class="video-card" @click="showVirtualDoctor = true">
-        <div class="video-bg-glow"></div>
-        <div class="video-inner">
-          <div class="video-left">
-            <div class="doctor-avatar-wrapper">
-              <span class="doctor-avatar">👨‍⚕️</span>
-              <div class="avatar-pulse p1"></div>
-              <div class="avatar-pulse p2"></div>
-              <div class="avatar-pulse p3"></div>
-            </div>
-          </div>
-          <div class="video-center">
-            <div class="video-badge">⭐ 核心功能</div>
-            <h2 class="video-title">视频问诊</h2>
-            <p class="video-desc">与资深老中医面对面交流，实时视频诊断，专业处方开具</p>
-            <div class="video-features">
-              <div class="feature-card">
-                <span class="fc-icon">📹</span>
-                <span class="fc-text">实时高清视频</span>
-              </div>
-              <div class="feature-card">
-                <span class="fc-icon">💬</span>
-                <span class="fc-text">在线即时咨询</span>
-              </div>
-              <div class="feature-card">
-                <span class="fc-icon">📋</span>
-                <span class="fc-text">电子处方开具</span>
-              </div>
-            </div>
-          </div>
-          <div class="video-right">
-            <button class="cta-button">
-              <span class="cta-text">立即体验</span>
-              <span class="cta-arrow">→</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- VirtualDoctor 组件 -->
-    <VirtualDoctor :show="showVirtualDoctor" @close="showVirtualDoctor = false" />
-
-    <!-- 主内容区 -->
     <main class="main-layout">
-      <!-- 左侧交互区 -->
       <div class="interaction-area">
-        <!-- 输入卡片 -->
-        <div class="card input-card">
+        <div class="card upload-card">
           <div class="card-top">
             <div class="card-label">
-              <span class="label-icon">🤖</span>
-              <span class="label-text">AI 智能辨证系统</span>
+              <span class="label-icon">📷</span>
+              <span class="label-text">上传舌部照片</span>
             </div>
             <div class="status-indicator">
               <span class="dot online"></span>
-              <span class="status-text">在线服务中</span>
+              <span class="status-text">AI 舌诊就绪</span>
             </div>
           </div>
-          <div class="input-section">
-            <el-input
-              v-model="symptoms"
-              type="textarea"
-              :rows="4"
-              placeholder="请详细描述您的症状，例如：&#10;• 头痛、发热三天，体温38.5°C&#10;• 咳嗽、痰黄稠、咽痛&#10;• 口渴、食欲不振、乏力…&#10;&#10;描述越详细，辨证分析越准确 ✨"
-              class="symptom-input"
+          <div class="upload-section">
+            <div v-if="!previewUrl" class="upload-placeholder" @click="$refs.fileInput.click()">
+              <div class="upload-icon">
+                <span class="upload-emoji">👅</span>
+                <div class="upload-circle"></div>
+              </div>
+              <p class="upload-text">点击上传舌部照片</p>
+              <small class="upload-hint">支持 JPG、PNG 格式，最大 5MB</small>
+              <div class="upload-features">
+                <span class="uf-item">☯ 气虚体质</span>
+                <span class="uf-item">🌙 阴虚体质</span>
+                <span class="uf-item">💧 痰湿体质</span>
+              </div>
+            </div>
+            
+            <div v-else class="preview-container">
+              <div class="preview-image">
+                <img :src="previewUrl" alt="舌部预览图片" />
+                <div v-if="uploading" class="uploading-overlay">
+                  <div class="upload-spinner"></div>
+                  <span>上传中...</span>
+                </div>
+              </div>
+              <div class="preview-actions">
+                <button class="action-btn clear-btn" @click="clearImage">
+                  <span class="btn-icon">🗑️</span>
+                  重新选择
+                </button>
+                <button
+                  class="action-btn recognize-btn"
+                  @click="startDiagnosis"
+                  :disabled="loading || !uploadedUrl"
+                >
+                  <span v-if="!loading">
+                    <span class="btn-icon">🔍</span>
+                    开始舌诊
+                  </span>
+                  <span v-else class="btn-loading-state">
+                    <i class="load-dot d1"></i>
+                    <i class="load-dot d2"></i>
+                    <i class="load-dot d3"></i>
+                    <span>AI 分析中...</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+            
+            <input
+              ref="fileInput"
+              type="file"
+              accept="image/*"
+              @change="handleFileChange($event.target.files[0])"
+              style="display: none"
             />
-            <div class="input-bottom">
-              <span class="input-hint">
-                <span class="hint-icon">💡</span>
-                支持自然语言智能识别症状
-              </span>
-              <button
-                @click="startDiagnosis()"
-                class="submit-btn"
-                :class="{ loading }"
-                :disabled="loading || !symptoms.trim()"
-              >
-                <span v-if="!loading" class="btn-normal">
-                  <span class="btn-icon">🔍</span>
-                  开始辨证分析
-                </span>
-                <span v-else class="btn-loading-state">
-                  <i class="load-dot d1"></i>
-                  <i class="load-dot d2"></i>
-                  <i class="load-dot d3"></i>
-                  <span>AI 分析中...</span>
-                </span>
-              </button>
-            </div>
           </div>
         </div>
 
-        <!-- 快捷症状选择 -->
-        <div class="quick-section" v-if="!diagnosisResult && !loading">
-          <div class="quick-header">
-            <span class="quick-title">常见症状快捷选</span>
-            <span class="quick-hint">点击即可开始问诊</span>
-          </div>
-          <div class="quick-grid">
-            <button
-              v-for="(q, index) in quickQuestions"
-              :key="q.text"
-              class="quick-btn"
-              :style="{ animationDelay: `${index * 0.05}s` }"
-              @click="quickQuestion(q.text)"
-            >
-              <span class="qb-icon">{{ q.icon }}</span>
-              <span class="qb-text">{{ q.text }}</span>
-              <span class="qb-arrow">›</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 结果展示 -->
         <div class="card result-card" v-if="diagnosisResult || loading">
           <div class="card-top">
             <div class="card-label">
               <span class="label-icon">{{ loading ? '⏳' : '✅' }}</span>
-              <span class="label-text">{{ loading ? '正在分析中...' : '辨证结果报告' }}</span>
+              <span class="label-text">{{ loading ? '正在舌诊分析...' : '舌诊分析报告' }}</span>
             </div>
             <div class="result-badge" :class="{ analyzing: loading, done: !loading }">
               {{ loading ? '分析中' : '已完成' }}
@@ -284,23 +261,23 @@ const viewHistory = (item) => {
             <div v-if="loading && !diagnosisResult" class="analyzing-ui">
               <div class="thinking-box">
                 <div class="brain-container">
-                  <span class="brain-icon">🧠</span>
+                  <span class="brain-icon">🔬</span>
                   <div class="think-waves">
                     <span class="wave w1"></span>
                     <span class="wave w2"></span>
                     <span class="wave w3"></span>
                   </div>
                 </div>
-                <p class="thinking-msg">AI 正在运用中医理论进行辨证分析...</p>
+                <p class="thinking-msg">AI 正在运用中医舌诊知识进行分析...</p>
               </div>
               <div class="progress-bar-wrap">
                 <div class="progress-track">
                   <div class="progress-fill"></div>
                 </div>
                 <div class="progress-steps">
-                  <span class="step active">收集症状</span>
-                  <span class="step">辨证推理</span>
-                  <span class="step">生成报告</span>
+                  <span class="step active">舌象分析</span>
+                  <span class="step">体质判断</span>
+                  <span class="step">生成方案</span>
                 </div>
               </div>
             </div>
@@ -308,23 +285,20 @@ const viewHistory = (item) => {
           </div>
         </div>
 
-        <!-- 免责声明 -->
         <div class="disclaimer-bar">
           <span class="disclaimer-icon">⚠️</span>
           <div class="disclaimer-body">
-            <strong>健康提示：</strong>本系统提供的辨证结果仅供参考学习，不能替代专业医师的面诊。如有严重或持续不适的症状，请及时就医。
+            <strong>温馨提示：</strong>AI 舌诊结果仅供参考学习，不能作为诊断依据。如有不适请及时就医咨询专业中医师。
           </div>
         </div>
       </div>
 
-      <!-- 右侧边栏 -->
       <aside class="sidebar-panel">
-        <!-- 问诊历史 -->
         <div class="panel history-panel">
           <div class="panel-head">
             <h3 class="panel-title">
               <span class="pt-icon">📝</span>
-              问诊记录
+              舌诊记录
             </h3>
             <button class="refresh-btn" @click="loadHistory" :class="{ spinning: historyLoading }">↻</button>
           </div>
@@ -334,8 +308,8 @@ const viewHistory = (item) => {
             </div>
             <div v-else-if="historyList.length === 0" class="empty-panel">
               <span class="empty-icon">📋</span>
-              <p>暂无问诊记录</p>
-              <small>开始您的第一次智能问诊吧！</small>
+              <p>暂无舌诊记录</p>
+              <small>开始您的第一次 AI 舌诊吧！</small>
             </div>
             <div v-else class="history-items">
               <div
@@ -349,56 +323,54 @@ const viewHistory = (item) => {
                   <span class="hist-time">{{ formatTime(item.createTime) }}</span>
                   <button class="hist-delete" @click.stop="deleteHistoryItem(item.id)">✕</button>
                 </div>
-                <p class="hist-question">{{ item.question }}</p>
-                <div class="hist-preview">{{ item.answer?.substring(0, 60) }}...</div>
+                <p class="hist-question">{{ item.answer?.substring(0, 60) }}...</p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 养生建议 -->
         <div class="panel tips-panel">
           <div class="panel-head tips-head">
             <h3 class="panel-title">
               <span class="pt-icon">💡</span>
-              中医养生建议
+              舌诊小贴士
             </h3>
           </div>
           <div class="panel-body tips-body">
             <div class="tip-entry">
               <div class="tip-icon-wrap" style="background: linear-gradient(135deg, #D1FAE5, #A7F3D0);">
-                <span>🌿</span>
+                <span>☀️</span>
               </div>
               <div class="tip-info">
-                <strong>顺时而养</strong>
-                <small>根据四季变化调整作息饮食</small>
+                <strong>自然光线</strong>
+                <small>在充足自然光下拍摄</small>
               </div>
             </div>
             <div class="tip-entry">
               <div class="tip-icon-wrap" style="background: linear-gradient(135deg, #FEF3C7, #FDE68A);">
-                <span>🍵</span>
+                <span>🍽️</span>
               </div>
               <div class="tip-info">
-                <strong>食疗调理</strong>
-                <small>药补不如食补，温和滋养</small>
+                <strong>饭前拍摄</strong>
+                <small>避免饮食影响舌苔颜色</small>
               </div>
             </div>
             <div class="tip-entry">
               <div class="tip-icon-wrap" style="background: linear-gradient(135deg, #DBEAFE, #BFDBFE);">
-                <span>🧘</span>
+                <span>👅</span>
               </div>
               <div class="tip-info">
-                <strong>动静结合</strong>
-                <small>适度运动，气血通畅</small>
+                <strong>自然伸出</strong>
+                <small>舌头自然放松不要用力</small>
               </div>
             </div>
             <div class="tip-entry">
               <div class="tip-icon-wrap" style="background: linear-gradient(135deg, #FCE7F3, #FBCFE8);">
-                <span>😴</span>
+                <span>📸</span>
               </div>
               <div class="tip-info">
-                <strong>起居有常</strong>
-                <small>规律作息，不熬夜伤身</small>
+                <strong>正面拍摄</strong>
+                <small>正面拍摄完整舌体</small>
               </div>
             </div>
           </div>
@@ -409,18 +381,17 @@ const viewHistory = (item) => {
 </template>
 
 <style lang="scss" scoped>
-// ==================== 配色变量 ====================
 $bg-base: #FAFBFD;
 $bg-warm: #FFF9F0;
-$bg-mint: #F0FDF4;
+$bg-green: #F0FDF4;
 $card-bg: #FFFFFF;
 $primary: #10B981;
 $primary-light: #D1FAE5;
 $primary-dark: #059669;
 $secondary: #06B6D4;
 $secondary-light: #CFFAFE;
-$accent-red: #F43F5E;
-$accent-red-light: #FFE4E6;
+$accent-orange: #F97316;
+$accent-orange-light: #FFF7ED;
 $text-dark: #1E293B;
 $text-medium: #475569;
 $text-light: #94A3B8;
@@ -430,14 +401,13 @@ $shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 $shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
 $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
 
-.diagnosis-page {
+.tongue-diagnosis-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, $bg-mint 0%, $bg-base 30%, $bg-warm 70%, $bg-base 100%);
+  background: linear-gradient(180deg, $bg-green 0%, $bg-base 30%, $bg-warm 70%, $bg-base 100%);
   position: relative;
   overflow-x: hidden;
 }
 
-// ==================== 动画定义 ====================
 @keyframes floatSlow {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-20px) rotate(8deg); }
@@ -457,11 +427,6 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
 @keyframes glowBreath {
   0%, 100% { opacity: 0.5; transform: scale(1); }
   50% { opacity: 0.8; transform: scale(1.05); }
-}
-
-@keyframes arrowMove {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(5px); }
 }
 
 @keyframes dotJump {
@@ -504,7 +469,15 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   100% { transform: scale(1); opacity: 1; }
 }
 
-// ==================== 背景装饰 ====================
+@keyframes uploadFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.05); }
+}
+
+@keyframes spinnerRotate {
+  to { transform: rotate(360deg); }
+}
+
 .bg-decoration {
   position: fixed;
   top: 0;
@@ -541,7 +514,7 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
     &.orb3 {
       width: 300px;
       height: 300px;
-      background: radial-gradient(circle, rgba(244, 63, 94, 0.12) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.12) 0%, transparent 70%);
       top: 40%;
       left: 45%;
       animation: glowBreath 15s ease-in-out infinite;
@@ -573,7 +546,6 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   }
 }
 
-// ==================== 头部 ====================
 .page-header {
   position: relative;
   z-index: 1;
@@ -661,202 +633,14 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
       }
 
       &:nth-child(3) {
-        background: $accent-red-light;
-        color: #BE123C;
+        background: $accent-orange-light;
+        color: #EA580C;
         animation-delay: 0.2s;
       }
     }
   }
 }
 
-// ==================== 视频问诊卡片 ====================
-.video-section {
-  position: relative;
-  z-index: 1;
-  padding: 0 40px 32px;
-}
-
-.video-card {
-  position: relative;
-  background: linear-gradient(135deg, #DC2626 0%, #EF4444 40%, #F87171 70%, #FCA5A5 100%);
-  border-radius: 24px;
-  padding: 36px 44px;
-  cursor: pointer;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    $shadow-lg,
-    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
-
-  &:hover {
-    transform: translateY(-6px) scale(1.01);
-    box-shadow:
-      0 24px 48px rgba(220, 38, 38, 0.3),
-      0 0 0 2px rgba(255, 255, 255, 0.2) inset;
-
-    .video-bg-glow { opacity: 1; }
-    .cta-arrow { transform: translateX(6px); }
-    .doctor-avatar-wrapper .avatar-pulse { animation-duration: 1.5s; }
-  }
-
-  .video-bg-glow {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
-    animation: glowBreath 4s ease-in-out infinite;
-    opacity: 0.6;
-    transition: opacity 0.4s;
-  }
-
-  .video-inner {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 36px;
-    align-items: center;
-  }
-
-  .video-left {
-    .doctor-avatar-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      .doctor-avatar {
-        font-size: 64px;
-        display: block;
-        filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.25));
-        position: relative;
-        z-index: 2;
-      }
-
-      .avatar-pulse {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        border-radius: 50%;
-        border: 2px solid rgba(255, 255, 255, 0.4);
-
-        &.p1 {
-          width: 90px;
-          height: 90px;
-          animation: pulseRing 2.5s ease-out infinite;
-        }
-
-        &.p2 {
-          width: 120px;
-          height: 120px;
-          animation: pulseRing 2.5s ease-out infinite 0.5s;
-        }
-
-        &.p3 {
-          width: 150px;
-          height: 150px;
-          animation: pulseRing 2.5s ease-out infinite 1s;
-        }
-      }
-    }
-  }
-
-  .video-center {
-    .video-badge {
-      display: inline-block;
-      padding: 5px 16px;
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(10px);
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      color: white;
-      margin-bottom: 14px;
-      letter-spacing: 0.5px;
-    }
-
-    .video-title {
-      font-size: 30px;
-      font-weight: 800;
-      color: white;
-      margin: 0 0 8px;
-      letter-spacing: 2px;
-    }
-
-    .video-desc {
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.88);
-      margin: 0 0 18px;
-      line-height: 1.5;
-    }
-
-    .video-features {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-
-      .feature-card {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        padding: 8px 14px;
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(8px);
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-
-        .fc-icon { font-size: 16px; }
-        .fc-text {
-          font-size: 13px;
-          font-weight: 600;
-          color: white;
-        }
-      }
-    }
-  }
-
-  .video-right {
-    .cta-button {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      padding: 18px 28px;
-      background: white;
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-
-      &:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-      }
-
-      .cta-text {
-        font-size: 14px;
-        font-weight: 700;
-        color: #DC2626;
-        letter-spacing: 1px;
-      }
-
-      .cta-arrow {
-        font-size: 24px;
-        color: #DC2626;
-        font-weight: 700;
-        transition: transform 0.3s;
-        animation: arrowMove 1.5s ease-in-out infinite;
-      }
-    }
-  }
-}
-
-// ==================== 主布局 ====================
 .main-layout {
   position: relative;
   z-index: 1;
@@ -883,7 +667,6 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   gap: 20px;
 }
 
-// ==================== 通用卡片 ====================
 .card {
   background: $card-bg;
   border-radius: 20px;
@@ -958,202 +741,198 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   }
 }
 
-// ==================== 输入卡片 ====================
-.input-card {
-  .input-section {
-    padding: 22px 24px;
+.upload-card {
+  .upload-section {
+    padding: 24px;
   }
 
-  .symptom-input {
-    :deep(.el-textarea__inner) {
-      background: #FAFBFC;
-      border: 2px solid $border-medium;
-      border-radius: 14px;
-      font-size: 14px;
-      line-height: 1.85;
-      color: $text-dark;
-      resize: none;
-      padding: 16px;
-      transition: all 0.3s ease;
-
-      &:focus {
-        border-color: $primary;
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12), 0 4px 16px rgba(16, 185, 129, 0.08);
-        background: white;
-      }
-
-      &::placeholder {
-        color: $text-light;
-      }
-    }
-  }
-
-  .input-bottom {
+  .upload-placeholder {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 18px;
-    gap: 16px;
-  }
-
-  .input-hint {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: $text-light;
-
-    .hint-icon { font-size: 16px; }
-  }
-
-  .submit-btn {
-    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 14px 36px;
-    background: linear-gradient(135deg, $primary, $secondary);
-    border: none;
-    border-radius: 14px;
-    color: white;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 1px;
+    gap: 16px;
+    padding: 48px 24px;
+    background: linear-gradient(135deg, #F0FDF4, #ECFDF5, #F0F9FF);
+    border-radius: 16px;
+    border: 2px dashed rgba(16, 185, 129, 0.25);
     cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    transition: all 0.3s ease;
 
-    &:hover:not(:disabled) {
-      transform: translateY(-3px);
-      box-shadow: 0 10px 28px rgba(16, 185, 129, 0.4);
-      background: linear-gradient(135deg, $primary-dark, $primary);
+    &:hover {
+      border-color: $primary;
+      background: linear-gradient(135deg, #D1FAE5, #CFFAFE, #E0F2FE);
+      transform: translateY(-2px);
     }
 
-    &:active:not(:disabled) {
-      transform: translateY(-1px);
-    }
-
-    &:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-
-    &.loading {
-      background: linear-gradient(135deg, #0891B2, #06B6D4);
-    }
-
-    .btn-icon { font-size: 18px; }
-
-    .btn-loading-state {
+    .upload-icon {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
 
-      .load-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: white;
-        animation: dotJump 1.4s ease-in-out infinite;
-
-        &.d1 { animation-delay: 0s; }
-        &.d2 { animation-delay: 0.15s; }
-        &.d3 { animation-delay: 0.3s; }
+      .upload-emoji {
+        font-size: 56px;
+        display: block;
+        animation: uploadFloat 3s ease-in-out infinite;
+        position: relative;
+        z-index: 1;
       }
 
-      span { font-size: 14px; }
+      .upload-circle {
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(16, 185, 129, 0.1);
+        animation: pulseRing 2s ease-out infinite;
+      }
     }
-  }
-}
 
-// ==================== 快捷症状 ====================
-.quick-section {
-  background: $card-bg;
-  border-radius: 20px;
-  border: 1px solid $border-light;
-  overflow: hidden;
-  box-shadow: $shadow-sm;
-  transition: all 0.35s ease;
-
-  &:hover {
-    box-shadow: $shadow-md;
-    transform: translateY(-2px);
-  }
-
-  .quick-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 24px;
-    background: linear-gradient(135deg, rgba(6, 182, 212, 0.04), transparent);
-    border-bottom: 1px solid $border-light;
-
-    .quick-title {
-      font-size: 15px;
-      font-weight: 700;
+    .upload-text {
+      font-size: 16px;
+      font-weight: 600;
       color: $text-dark;
+      margin: 0;
     }
 
-    .quick-hint {
+    .upload-hint {
       font-size: 12px;
       color: $text-light;
     }
-  }
 
-  .quick-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    padding: 18px 24px;
-  }
+    .upload-features {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
 
-  .quick-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 14px;
-    background: linear-gradient(135deg, #F0FDF4, #ECFDF5);
-    border: 1.5px solid rgba(16, 185, 129, 0.15);
-    border-radius: 14px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 13px;
-    color: $text-medium;
-    font-weight: 500;
-    animation: tagPop 0.4s ease-out backwards;
-
-    .qb-icon { font-size: 19px; flex-shrink: 0; }
-    .qb-text { flex: 1; }
-    .qb-arrow {
-      font-size: 16px;
-      color: $text-light;
-      opacity: 0;
-      transform: translateX(-5px);
-      transition: all 0.3s;
+      .uf-item {
+        padding: 6px 14px;
+        background: white;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        color: $text-medium;
+        box-shadow: $shadow-sm;
+      }
     }
+  }
 
-    &:hover {
-      background: linear-gradient(135deg, $primary, $secondary);
-      color: white;
-      border-color: transparent;
-      transform: translateY(-4px);
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+  .preview-container {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 
-      .qb-arrow {
-        opacity: 1;
-        transform: translateX(0);
-        color: white;
+    .preview-image {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #F8FAFC;
+      box-shadow: $shadow-sm;
+
+      img {
+        width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+        display: block;
+      }
+
+      .uploading-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.85);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+
+        .upload-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid rgba(16, 185, 129, 0.2);
+          border-top-color: $primary;
+          border-radius: 50%;
+          animation: spinnerRotate 0.8s linear infinite;
+        }
+
+        span {
+          font-size: 14px;
+          font-weight: 600;
+          color: $primary-dark;
+        }
       }
     }
 
-    &:active {
-      transform: translateY(-2px);
+    .preview-actions {
+      display: flex;
+      gap: 12px;
+
+      .action-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px 20px;
+        border-radius: 14px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+
+        .btn-icon { font-size: 16px; }
+
+        &.clear-btn {
+          background: linear-gradient(135deg, #F1F5F9, #E2E8F0);
+          color: $text-medium;
+
+          &:hover {
+            background: linear-gradient(135deg, #E2E8F0, #CBD5E1);
+            transform: translateY(-2px);
+          }
+        }
+
+        &.recognize-btn {
+          background: linear-gradient(135deg, $primary, $secondary);
+          color: white;
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+
+          &:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 28px rgba(16, 185, 129, 0.4);
+          }
+
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+          }
+
+          .btn-loading-state {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            .load-dot {
+              width: 7px;
+              height: 7px;
+              border-radius: 50%;
+              background: white;
+              animation: dotJump 1.4s ease-in-out infinite;
+
+              &.d1 { animation-delay: 0s; }
+              &.d2 { animation-delay: 0.15s; }
+              &.d3 { animation-delay: 0.3s; }
+            }
+          }
+        }
+      }
     }
   }
 }
 
-// ==================== 结果卡片 ====================
 .result-card {
   animation: fadeInUp 0.5s ease-out;
 
@@ -1264,7 +1043,6 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   }
 }
 
-// ==================== 免责声明 ====================
 .disclaimer-bar {
   display: flex;
   align-items: flex-start;
@@ -1286,7 +1064,6 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   }
 }
 
-// ==================== 侧边栏面板 ====================
 .panel {
   background: $card-bg;
   border-radius: 20px;
@@ -1358,7 +1135,6 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   }
 }
 
-// ==================== 历史记录面板 ====================
 .history-panel {
   .skeleton-loader {
     display: flex;
@@ -1476,19 +1252,9 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-
-    .hist-preview {
-      font-size: 12px;
-      color: $text-light;
-      line-height: 1.5;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
   }
 }
 
-// ==================== 养生建议面板 ====================
 .tips-panel {
   .tips-body {
     display: flex;
@@ -1542,11 +1308,8 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   }
 }
 
-// ==================== 响应式设计 ====================
 @media (max-width: 1280px) {
   .sidebar-panel { width: 320px; }
-  .video-card { padding: 30px 36px; }
-  .quick-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 1024px) {
@@ -1555,7 +1318,7 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
 }
 
 @media (max-width: 768px) {
-  .diagnosis-page { background: linear-gradient(180deg, $bg-mint 0%, $bg-base 50%); }
+  .tongue-diagnosis-page { background: linear-gradient(180deg, $bg-green 0%, $bg-base 50%); }
 
   .bg-decoration {
     .gradient-orb { opacity: 0.2; }
@@ -1572,42 +1335,14 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
     .header-tags { gap: 10px; .tag { font-size: 12px; padding: 6px 12px; } }
   }
 
-  .video-section { padding: 0 20px 24px; }
-
-  .video-card {
-    padding: 26px 20px;
-    border-radius: 20px;
-
-    .video-inner {
-      grid-template-columns: 1fr;
-      gap: 24px;
-      text-align: center;
-    }
-
-    .video-center {
-      .video-features { justify-content: center; flex-wrap: wrap; }
-    }
-
-    .video-right {
-      .cta-button {
-        flex-direction: row;
-        padding: 14px 32px;
-      }
-    }
-  }
-
   .main-layout { padding: 0 20px 40px; }
-
-  .quick-grid { grid-template-columns: repeat(2, 1fr); }
 
   .result-card .result-body .result-content { max-height: 350px; }
 
-  .input-card .input-bottom {
+  .upload-card .preview-container .preview-actions {
     flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
 
-    .submit-btn { width: 100%; }
+    .action-btn { width: 100%; }
   }
 }
 </style>
