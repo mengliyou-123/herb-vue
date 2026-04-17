@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { Search } from "@element-plus/icons-vue";
 import { bookListService } from "@/api/book.js";
 import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 
 const router = useRouter();
 
@@ -80,6 +81,27 @@ const displayedCategories = () => {
 
 const toggleCategoryExpand = () => {
   showAllCategories.value = !showAllCategories.value;
+};
+
+const recommendBooks = [
+  { name: '黄帝内经', desc: '中医理论基础' },
+  { name: '本草纲目', desc: '中药学巨著' },
+  { name: '伤寒论', desc: '辨证论治经典' },
+  { name: '傅青主女科', desc: '妇科专著经典' }
+];
+
+const getRecommendBookInfo = (bookName) => {
+  const book = books.value.find(b => b.bookName === bookName || b.bookName.includes(bookName));
+  return book || { id: null, bookName: bookName, coverImg: null };
+};
+
+const goToRecommendBook = (bookName) => {
+  const book = books.value.find(b => b.bookName === bookName || b.bookName.includes(bookName));
+  if (book) {
+    chapterList(book.id);
+  } else {
+    ElMessage.warning(`暂未收录《${bookName}》，敬请期待`);
+  }
 };
 </script>
 
@@ -380,12 +402,25 @@ const toggleCategoryExpand = () => {
           </div>
           <div class="panel-body">
             <div class="recommend-list">
-              <div class="recommend-item" v-for="i in 4" :key="i">
-                <div class="rec-rank" :class="{ top: i <= 3 }">{{ i }}</div>
-                <div class="rec-info">
-                  <h4 class="rec-title">《{{ ['黄帝内经', '本草纲目', '伤寒论', '金匮要略'][i-1] }}》</h4>
-                  <p class="rec-desc">{{ ['中医理论基础', '中药学巨著', '辨证论治经典', '杂病诊治纲要'][i-1] }}</p>
+              <div 
+                class="recommend-item" 
+                v-for="(book, index) in recommendBooks" 
+                :key="index"
+                @click="goToRecommendBook(book.name)"
+              >
+                <div class="rec-rank" :class="{ top: index < 3 }">{{ index + 1 }}</div>
+                <div class="rec-cover">
+                  <img 
+                    :src="getRecommendBookInfo(book.name).coverImg || '/default.png'" 
+                    :alt="book.name"
+                  />
+                  <div class="rec-cover-overlay"></div>
                 </div>
+                <div class="rec-info">
+                  <h4 class="rec-title">《{{ book.name }}》</h4>
+                  <p class="rec-desc">{{ book.desc }}</p>
+                </div>
+                <div class="rec-arrow">→</div>
               </div>
             </div>
           </div>
@@ -1537,9 +1572,24 @@ const toggleCategoryExpand = () => {
     cursor: pointer;
 
     &:hover {
-      background: linear-gradient(135deg, rgba(26, 35, 126, 0.06), transparent);
+      background: linear-gradient(135deg, rgba(26, 35, 126, 0.08), transparent);
       border-left-color: #D4AF37;
-      transform: translateX(4px);
+      transform: translateX(6px);
+      box-shadow: 0 4px 12px rgba(26, 35, 126, 0.1);
+
+      .rec-arrow {
+        opacity: 1;
+        transform: translateX(4px);
+        color: #D4AF37;
+      }
+
+      .rec-title {
+        color: #D32F2F;
+      }
+
+      .rec-cover img {
+        transform: scale(1.1);
+      }
     }
 
     .rec-rank {
@@ -1562,6 +1612,48 @@ const toggleCategoryExpand = () => {
       }
     }
 
+    .rec-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, rgba(26, 35, 126, 0.06), rgba(92, 107, 192, 0.04));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .rec-cover {
+      width: 42px;
+      height: 56px;
+      border-radius: 4px;
+      overflow: hidden;
+      flex-shrink: 0;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(26, 35, 126, 0.1);
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+      }
+
+      .rec-cover-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(26, 35, 126, 0.05) 0%,
+          transparent 50%,
+          rgba(0, 0, 0, 0.1) 100%
+        );
+        pointer-events: none;
+      }
+    }
+
     .rec-info {
       flex: 1;
       min-width: 0;
@@ -1574,6 +1666,7 @@ const toggleCategoryExpand = () => {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        transition: color 0.3s ease;
       }
 
       .rec-desc {
@@ -1584,6 +1677,16 @@ const toggleCategoryExpand = () => {
         overflow: hidden;
         text-overflow: ellipsis;
       }
+    }
+
+    .rec-arrow {
+      font-size: 16px;
+      font-weight: 600;
+      color: #5C6BC0;
+      opacity: 0;
+      transform: translateX(0);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
     }
   }
 }

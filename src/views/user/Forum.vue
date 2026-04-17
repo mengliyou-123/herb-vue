@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { EditPen, Plus } from '@element-plus/icons-vue'
+import { EditPen, Plus, Delete } from '@element-plus/icons-vue'
 import {
   postAddService,
   postListService,
@@ -10,7 +10,8 @@ import {
   myPostService,
   hotPostService
 } from "@/api/post.js";
-import { postCollListService } from "@/api/collections.js"
+import { postCollListService, deleteByPostIdService } from "@/api/collections.js"
+import { deleteCommentsByPostIdService } from "@/api/comment.js"
 import { useRouter } from "vue-router";
 import { useTokenStore } from "@/stores/token";
 import {useUserInfoStore} from "@/stores/userInfo";
@@ -128,6 +129,28 @@ const truncateContent = (content) => {
   if (!content) return '';
   const text = content.replace(/<[^>]*>/g, '');
   return text.length > 120 ? text.substring(0, 120) + '...' : text;
+};
+
+// 判断是否是自己的帖子
+const isMyPost = (post) => {
+  return post.posterId === userInfoStore.userInfo.id;
+};
+
+// 删除帖子
+const deletePost = (event, id) => {
+  event.stopPropagation();
+  ElMessageBox.confirm("确定要删除这篇帖子吗？删除后无法恢复。", "删除确认", {
+    confirmButtonText: "确定删除",
+    cancelButtonText: "取消",
+    type: "warning",
+    confirmButtonClass: "el-button--danger"
+  }).then(async () => {
+    await deleteByPostIdService(id);
+    await deleteCommentsByPostIdService(id);
+    await postDeleteService(id);
+    ElMessage.success("删除成功");
+    await postList();
+  }).catch(() => {});
 };
 </script>
 
@@ -321,7 +344,17 @@ const truncateContent = (content) => {
 
                 <!-- 内容区 -->
                 <div class="post-content">
-                  <h2 class="post-title">{{ p.title }}</h2>
+                  <div class="post-title-row">
+                    <h2 class="post-title">{{ p.title }}</h2>
+                    <el-button
+                      v-if="isMyPost(p)"
+                      class="delete-btn"
+                      :icon="Delete"
+                      circle
+                      size="small"
+                      @click="deletePost($event, p.id)"
+                    />
+                  </div>
 
                   <div class="post-meta">
                     <span class="meta-item time-meta">
@@ -1370,19 +1403,50 @@ const truncateContent = (content) => {
     flex-direction: column;
     min-width: 0;
 
+    .post-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
     .post-title {
       font-size: 18px;
       font-weight: 700;
       color: #5D3A1A;
-      margin: 0 0 10px;
+      margin: 0;
       line-height: 1.4;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
       transition: color 0.3s ease;
+      flex: 1;
 
       .teahouse-post-card:hover & { color: #8B4513; }
+    }
+
+    .delete-btn {
+      flex-shrink: 0;
+      background: rgba(220, 76, 100, 0.08);
+      border: 1px solid rgba(220, 76, 100, 0.2);
+      color: #DC4C64;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: scale(0.8);
+
+      .teahouse-post-card:hover & {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      &:hover {
+        background: #DC4C64;
+        border-color: #DC4C64;
+        color: #fff;
+        transform: scale(1.1);
+      }
     }
 
     .post-meta {
