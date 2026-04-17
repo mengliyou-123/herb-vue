@@ -112,7 +112,7 @@ const storyContents = [
       <div class="header">
         <span>{{ storyTitles[index - 1] }}</span>
         <div class="extra">
-          <el-button style="background-color:#8B4513;color:white;" @click="backToHerb()">返回</el-button>
+          <el-button class="back-btn" @click="backToHerb()">返回</el-button>
         </div>
       </div>
     </template>
@@ -139,7 +139,10 @@ const storyContents = [
 .page-container {
   min-height: 100%;
   box-sizing: border-box;
-  background-color: #FFF8DC;
+  background-color: #FAF8F5;
+  background-image: 
+    radial-gradient(ellipse at 20% 30%, rgba(107, 68, 35, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(45, 80, 22, 0.02) 0%, transparent 50%);
 
   .header {
     display: flex;
@@ -147,6 +150,20 @@ const storyContents = [
     justify-content: space-between;
     font-size: 20px;
     font-weight: 600;
+    color: #2C2416;
+  }
+  
+  .back-btn {
+    background: linear-gradient(135deg, #6B4423 0%, #8B5E3C 100%);
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: linear-gradient(135deg, #8B5E3C 0%, #A67C52 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(107, 68, 35, 0.25);
+    }
   }
 }
 
@@ -159,44 +176,108 @@ const storyContents = [
 .story-panel {
   width: 100%;
   max-width: 1000px;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.15);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF9F0 100%);
+  border-radius: 16px;
+  box-shadow: 
+    0 10px 30px rgba(44, 36, 22, 0.08),
+    0 4px 8px rgba(44, 36, 22, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   overflow: hidden;
+  border: 1px solid rgba(107, 68, 35, 0.1);
   
   .story-header {
-    background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+    background: linear-gradient(135deg, #6B4423 0%, #8B5E3C 50%, #A67C52 100%);
     padding: 18px 25px;
     font-size: 18px;
     font-weight: 600;
     color: #fff;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 20px,
+          rgba(255, 255, 255, 0.03) 20px,
+          rgba(255, 255, 255, 0.03) 40px
+        );
+    }
+    
+    span {
+      position: relative;
+      z-index: 1;
+    }
   }
   
   .story-content {
-    padding: 30px 35px;
-    background-color: #FFFEF5;
+    padding: 35px 40px;
+    background: linear-gradient(180deg, #FFFEFB 0%, #FFF9F0 100%);
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 40px;
+      right: 40px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(107, 68, 35, 0.15), transparent);
+    }
   }
   
   .story-title {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 700;
-    color: #8B4513;
+    color: #6B4423;
     text-align: center;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 2px dashed #D2691E;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px dashed rgba(107, 68, 35, 0.2);
+    position: relative;
+    letter-spacing: 2px;
+    
+    &::after {
+      content: '◆';
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #A67C52;
+      font-size: 14px;
+      background: linear-gradient(180deg, #FFFEFB, #FFF9F0);
+      padding: 0 10px;
+    }
   }
   
   .story-text {
-    line-height: 2;
-    color: #333;
+    line-height: 2.2;
+    color: #2C2416;
     font-size: 15px;
     text-align: justify;
     
     p {
       text-indent: 2em;
-      margin-bottom: 18px;
+      margin-bottom: 20px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
+      border-left: 3px solid rgba(107, 68, 35, 0.15);
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.9);
+        border-left-color: #8B5E3C;
+        box-shadow: 0 2px 8px rgba(107, 68, 35, 0.08);
+      }
       
       &:last-child {
         margin-bottom: 0;
@@ -213,15 +294,30 @@ const storyContents = [
   .story-panel {
     .story-content {
       padding: 20px 18px;
+      
+      &::before {
+        left: 18px;
+        right: 18px;
+      }
     }
     
     .story-title {
       font-size: 20px;
+      
+      &::after {
+        bottom: -10px;
+        font-size: 12px;
+      }
     }
     
     .story-text {
       font-size: 14px;
-      line-height: 1.8;
+      line-height: 1.9;
+      
+      p {
+        padding: 10px 12px;
+        margin-bottom: 15px;
+      }
     }
   }
 }

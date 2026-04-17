@@ -132,9 +132,9 @@ const addPost = async () => {
 
 
 <template>
-<el-card style="background-color: #FFF8DC">
+<el-card style="background-color: #FAF8F5">
 
-    <div style="display: flex;width: 95%;margin: 0 auto;background-color: #FFF8DC;border-radius: 5px;">
+    <div style="display: flex;width: 95%;margin: 0 auto;background-color: #FAF8F5;border-radius: 5px;">
       <div style="flex: 1;border-right: 1px solid #cccccc;">
  
         <div v-for="p in posts" :key="p" style="height: 170px;display: flex;margin: 10px 20px;border-bottom: 1px solid #cccccc;" class="item">

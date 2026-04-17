@@ -124,7 +124,7 @@ getBookById();
 .page-container {
   min-height: 100%;
   box-sizing: border-box;
-  background-color: #FFF8DC;
+  background-color: #FAF8F5;
 
   .header {
     display: flex;

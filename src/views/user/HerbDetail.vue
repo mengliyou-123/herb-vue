@@ -498,7 +498,7 @@ const extractQuestion = (question) => {
 }
 
 .ai-qa-panel {
-  background-color: #FFF8DC;
+  background-color: #FAF8F5;
 
   .ai-header {
     font-size: 18px;

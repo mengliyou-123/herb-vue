@@ -1062,7 +1062,7 @@ const truncateContent = (content) => {
       .stat-icon-wrap {
         width: 42px;
         height: 42px;
-        background: linear-gradient(135deg, #FFF8DC, #FFEFD5);
+        background: linear-gradient(135deg, #FAF8F5, #FFF9F0);
         border-radius: 12px;
         display: flex;
         align-items: center;
@@ -1310,7 +1310,7 @@ const truncateContent = (content) => {
     flex-shrink: 0;
     overflow: hidden;
     position: relative;
-    background: linear-gradient(135deg, #FFF8DC, #FFEFD5);
+    background: linear-gradient(135deg, #FAF8F5, #FFF9F0);
 
     img {
       width: 100%;
@@ -1598,7 +1598,7 @@ const truncateContent = (content) => {
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      border: 3px solid #FFF8DC;
+      border: 3px solid #FAF8F5;
       box-shadow: 0 4px 12px rgba(139, 69, 19, 0.2);
     }
 
@@ -1731,7 +1731,7 @@ const truncateContent = (content) => {
       font-size: 10px;
       font-weight: 800;
       color: #FF6B35;
-      background: #FFF8DC;
+      background: #FAF8F5;
       padding: 3px 8px;
       border-radius: 8px;
       letter-spacing: 1px;
@@ -1775,7 +1775,7 @@ const truncateContent = (content) => {
         color: #999;
 
         &.top3 {
-          background: linear-gradient(135deg, #FFF8DC, #FFEFD5);
+          background: linear-gradient(135deg, #FAF8F5, #FFF9F0);
         }
 
         .rank-crown { font-size: 16px; }
