@@ -34,6 +34,85 @@ let nodOffset = 0
 let particles = []
 let herbParticles = []
 
+const userVideoRef = ref(null)
+const isCameraOn = ref(false)
+const isCameraLoading = ref(false)
+const cameraError = ref('')
+let mediaStream = null
+
+const videoPos = ref({ x: 20, y: 20 })
+const isDragging = ref(false)
+let dragOffset = { x: 0, y: 0 }
+let dragContainer = null
+
+const onVideoDragStart = (e) => {
+  if (e.target.closest('.vd-ctrl-btn') || e.target.closest('.vd-mic-btn') || e.target.closest('.vd-cam-btn')) return
+  e.preventDefault()
+  isDragging.value = true
+  
+  const videoEl = e.currentTarget
+  dragContainer = videoEl.parentElement
+  const containerRect = dragContainer.getBoundingClientRect()
+  
+  dragOffset.x = e.clientX - containerRect.left - videoPos.value.x
+  dragOffset.y = e.clientY - containerRect.top - videoPos.value.y
+  
+  const onMove = (ev) => {
+    if (!isDragging.value || !dragContainer) return
+    const rect = dragContainer.getBoundingClientRect()
+    let newX = ev.clientX - rect.left - dragOffset.x
+    let newY = ev.clientY - rect.top - dragOffset.y
+    newX = Math.max(0, Math.min(newX, rect.width - 220))
+    newY = Math.max(0, Math.min(newY, rect.height - 165))
+    videoPos.value = { x: newX, y: newY }
+  }
+  
+  const onUp = () => {
+    isDragging.value = false
+    dragContainer = null
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+  
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
+
+const onVideoTouchStart = (e) => {
+  if (e.target.closest('.vd-ctrl-btn') || e.target.closest('.vd-mic-btn') || e.target.closest('.vd-cam-btn')) return
+  const touch = e.touches[0]
+  isDragging.value = true
+  
+  const videoEl = e.currentTarget
+  dragContainer = videoEl.parentElement
+  const containerRect = dragContainer.getBoundingClientRect()
+  
+  dragOffset.x = touch.clientX - containerRect.left - videoPos.value.x
+  dragOffset.y = touch.clientY - containerRect.top - videoPos.value.y
+  
+  const onTouchMove = (ev) => {
+    if (!isDragging.value || !dragContainer) return
+    ev.preventDefault()
+    const t = ev.touches[0]
+    const rect = dragContainer.getBoundingClientRect()
+    let newX = t.clientX - rect.left - dragOffset.x
+    let newY = t.clientY - rect.top - dragOffset.y
+    newX = Math.max(0, Math.min(newX, rect.width - 220))
+    newY = Math.max(0, Math.min(newY, rect.height - 165))
+    videoPos.value = { x: newX, y: newY }
+  }
+  
+  const onTouchEnd = () => {
+    isDragging.value = false
+    dragContainer = null
+    document.removeEventListener('touchmove', onTouchMove)
+    document.removeEventListener('touchend', onTouchEnd)
+  }
+  
+  document.addEventListener('touchmove', onTouchMove, { passive: false })
+  document.addEventListener('touchend', onTouchEnd)
+}
+
 const quickQuestions = [
   '最近总是失眠多梦怎么办',
   '感冒咳嗽有好的中药方子吗',
@@ -52,6 +131,10 @@ onUnmounted(() => {
   if (synthesis.speaking) synthesis.cancel()
   if (animationId) cancelAnimationFrame(animationId)
   document.removeEventListener('mousemove', handleMouseMove)
+  stopCamera()
+  stopAudioDetection()
+  clearTimeout(noSpeechTimer)
+  clearTimeout(recognitionRestartTimer)
 })
 
 const handleMouseMove = (e) => {
@@ -94,6 +177,63 @@ const startRenderLoop = () => {
     animationId = requestAnimationFrame(loop)
   }
   loop()
+}
+
+const startCamera = async () => {
+  if (isCameraOn.value) return
+  
+  isCameraLoading.value = true
+  cameraError.value = ''
+  
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        facingMode: 'user'
+      },
+      audio: false
+    })
+    
+    if (userVideoRef.value) {
+      userVideoRef.value.srcObject = mediaStream
+      await userVideoRef.value.play()
+      isCameraOn.value = true
+      ElMessage.success('摄像头已开启')
+    }
+  } catch (err) {
+    console.error('摄像头启动失败:', err)
+    if (err.name === 'NotAllowedError') {
+      cameraError.value = '请允许访问摄像头权限'
+    } else if (err.name === 'NotFoundError') {
+      cameraError.value = '未检测到摄像头设备'
+    } else {
+      cameraError.value = '摄像头启动失败，请检查设备'
+    }
+    ElMessage.warning(cameraError.value)
+  } finally {
+    isCameraLoading.value = false
+  }
+}
+
+const stopCamera = () => {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(track => track.stop())
+    mediaStream = null
+  }
+  if (userVideoRef.value) {
+    userVideoRef.value.srcObject = null
+  }
+  isCameraOn.value = false
+}
+
+const toggleCamera = () => {
+  if (isCameraOn.value) {
+    stopCamera()
+    ElMessage.info('摄像头已关闭')
+  } else {
+    startCamera()
+  }
 }
 
 // ==================== 粒子系统 ====================
@@ -648,30 +788,174 @@ const drawDecorations = (W, H) => {
 }
 
 // ==================== 语音识别 ====================
+const voiceText = ref('')
+const showVoiceTip = ref(false)
+const audioLevel = ref(0)
+const isVoiceDetected = ref(false)
+let audioContext = null
+let analyser = null
+let microphone = null
+let audioCheckInterval = null
+let recognitionRestartTimer = null
+let noSpeechTimer = null
+let manualStop = false
+
 const initSpeechRecognition = () => {
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     recognition.value = new SR()
-    recognition.value.continuous = false
+    recognition.value.continuous = true
     recognition.value.interimResults = true
     recognition.value.lang = 'zh-CN'
-    recognition.value.onstart = () => { isListening.value = true; doctorMood.value = 'listening' }
+    recognition.value.maxAlternatives = 3
+    
+    recognition.value.onstart = () => { 
+      manualStop = false
+      isListening.value = true
+      doctorMood.value = 'listening'
+      showVoiceTip.value = true
+      voiceText.value = ''
+      startAudioDetection()
+      noSpeechTimer = setTimeout(() => {
+        if (!voiceText.value && isListening.value) {
+          voiceText.value = '请大声说话，我正在听...'
+        }
+      }, 2000)
+    }
+    
     recognition.value.onresult = (e) => {
-      let t = ''
+      clearTimeout(noSpeechTimer)
+      let interimTranscript = ''
+      let finalTranscript = ''
+      
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) t += e.results[i][0].transcript
+        const transcript = e.results[i][0].transcript
+        const confidence = e.results[i][0].confidence || 0.5
+        
+        if (e.results[i].isFinal && confidence > 0.3) {
+          finalTranscript += transcript
+        } else {
+          interimTranscript += transcript
+        }
       }
-      if (t) { userInput.value = t; sendMessage() }
+      
+      if (interimTranscript) {
+        voiceText.value = interimTranscript
+        isVoiceDetected.value = true
+      }
+      
+      if (finalTranscript) {
+        voiceText.value = finalTranscript
+        userInput.value = finalTranscript
+        manualStop = true
+        setTimeout(() => {
+          sendMessage()
+          showVoiceTip.value = false
+          stopAudioDetection()
+        }, 300)
+      }
     }
+    
     recognition.value.onerror = (e) => {
-      isListening.value = false; doctorMood.value = 'neutral'
-      if (e.error === 'no-speech') ElMessage.warning('没有检测到语音，请重试')
+      console.log('语音识别错误:', e.error)
+      if (e.error === 'no-speech') {
+        if (manualStop) return
+        clearTimeout(recognitionRestartTimer)
+        recognitionRestartTimer = setTimeout(() => {
+          if (showVoiceTip.value && !voiceText.value && !manualStop) {
+            voiceText.value = '未检测到声音，请靠近麦克风说话'
+            setTimeout(() => {
+              if (isListening.value && !manualStop) {
+                try {
+                  recognition.value.stop()
+                  setTimeout(() => {
+                    if (showVoiceTip.value && !manualStop) recognition.value.start()
+                  }, 100)
+                } catch (err) {}
+              }
+            }, 1500)
+          }
+        }, 500)
+      } else if (e.error === 'audio-capture') {
+        ElMessage.error('无法访问麦克风，请检查权限')
+        stopListening()
+      } else if (e.error === 'not-allowed') {
+        ElMessage.error('麦克风权限被拒绝，请在浏览器设置中允许')
+        stopListening()
+      } else if (e.error === 'network') {
+        ElMessage.warning('网络连接不稳定，语音识别可能受影响')
+      }
     }
+    
     recognition.value.onend = () => {
-      isListening.value = false
-      setTimeout(() => { if (doctorMood.value === 'listening') doctorMood.value = 'neutral' }, 500)
+      if (manualStop) {
+        isListening.value = false
+        showVoiceTip.value = false
+        stopAudioDetection()
+        clearTimeout(noSpeechTimer)
+        clearTimeout(recognitionRestartTimer)
+        setTimeout(() => { if (doctorMood.value === 'listening') doctorMood.value = 'neutral' }, 500)
+      } else if (showVoiceTip.value && !userInput.value) {
+        try {
+          recognition.value.start()
+        } catch (e) {}
+      } else {
+        isListening.value = false
+        showVoiceTip.value = false
+        stopAudioDetection()
+        setTimeout(() => { if (doctorMood.value === 'listening') doctorMood.value = 'neutral' }, 500)
+      }
     }
   }
+}
+
+const startAudioDetection = async () => {
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)()
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    microphone = audioContext.createMediaStreamSource(stream)
+    analyser = audioContext.createAnalyser()
+    analyser.fftSize = 256
+    analyser.smoothingTimeConstant = 0.8
+    microphone.connect(analyser)
+    
+    const dataArray = new Uint8Array(analyser.frequencyBinCount)
+    
+    audioCheckInterval = setInterval(() => {
+      if (!analyser) return
+      analyser.getByteFrequencyData(dataArray)
+      let sum = 0
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i]
+      }
+      const avg = sum / dataArray.length
+      audioLevel.value = Math.min(100, Math.max(0, avg * 2))
+      
+      if (avg > 20) {
+        isVoiceDetected.value = true
+      }
+    }, 50)
+  } catch (e) {
+    console.log('音量检测启动失败:', e)
+  }
+}
+
+const stopAudioDetection = () => {
+  if (audioCheckInterval) {
+    clearInterval(audioCheckInterval)
+    audioCheckInterval = null
+  }
+  if (microphone) {
+    microphone.disconnect()
+    microphone = null
+  }
+  if (audioContext) {
+    audioContext.close()
+    audioContext = null
+  }
+  analyser = null
+  audioLevel.value = 0
+  isVoiceDetected.value = false
 }
 
 // ==================== 对话功能 ====================
@@ -701,12 +985,27 @@ const startListening = () => {
 }
 
 const stopListening = () => {
-  if (recognition.value && isListening.value) recognition.value.stop()
+  manualStop = true
+  clearTimeout(noSpeechTimer)
+  clearTimeout(recognitionRestartTimer)
+  showVoiceTip.value = false
+  stopAudioDetection()
+  if (recognition.value && isListening.value) {
+    recognition.value.stop()
+  }
+  isListening.value = false
+  voiceText.value = ''
+  setTimeout(() => { if (doctorMood.value === 'listening') doctorMood.value = 'neutral' }, 300)
 }
 
 const sendMessage = async () => {
   const text = userInput.value.trim()
   if (!text || isSpeaking.value) return
+  
+  if (isListening.value) {
+    stopListening()
+  }
+  
   addMessage('user', text)
   userInput.value = ''
   doctorMood.value = 'thinking'
@@ -731,10 +1030,36 @@ const addMessage = (type, content) => {
 const speak = (text) => {
   if (!synthesis) return
   if (synthesis.speaking) synthesis.cancel()
+  
+  if (isListening.value) {
+    stopListening()
+  }
+  
   const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'zh-CN'; u.rate = 0.88; u.pitch = 0.85; u.volume = 1
-  const v = synthesis.getVoices().find(v => v.lang.includes('zh'))
-  if (v) u.voice = v
+  u.lang = 'zh-CN'
+  u.rate = 0.82
+  u.pitch = 0.6
+  u.volume = 1
+  
+  const voices = synthesis.getVoices()
+  const zhMaleVoices = voices.filter(v => {
+    const name = v.name.toLowerCase()
+    return v.lang.includes('zh') && (
+      name.includes('male') || 
+      name.includes('男') || 
+      name.includes('yunyang') || 
+      name.includes('kangkang') ||
+      name.includes('liangliang') ||
+      name.includes('yaoyao') === false
+    )
+  })
+  
+  const zhVoice = zhMaleVoices.length > 0 
+    ? zhMaleVoices[0] 
+    : voices.find(v => v.lang.includes('zh'))
+  
+  if (zhVoice) u.voice = zhVoice
+  
   u.onstart = () => { isSpeaking.value = true; lipSyncActive.value = true; doctorMood.value = 'speaking' }
   u.onend = () => { isSpeaking.value = false; lipSyncActive.value = false; doctorMood.value = 'neutral' }
   u.onerror = () => { isSpeaking.value = false; lipSyncActive.value = false; doctorMood.value = 'neutral' }
@@ -789,24 +1114,78 @@ watch(() => props.show, (v) => { if (v && !isCalling.value) startCall() })
       </div>
 
       <div class="vd-body">
-        <div class="vd-video">
-          <div class="vd-canvas-wrap">
-            <canvas ref="canvasRef" width="420" height="520" class="vd-canvas" :class="{ speaking: isSpeaking, listening: isListening }"></canvas>
-            <div class="vd-mood-badge" :class="doctorMood">
-              <span v-if="doctorMood==='speaking'">🌊 讲解中</span>
-              <span v-else-if="doctorMood==='listening'">👂 聆听中</span>
-              <span v-else-if="doctorMood==='thinking'">💭 思考中</span>
-              <span v-else>✨ 等待提问</span>
+        <div class="vd-main-content">
+          <div class="vd-doctor-section">
+            <div class="vd-canvas-wrap">
+              <canvas ref="canvasRef" width="480" height="600" class="vd-canvas" :class="{ speaking: isSpeaking, listening: isListening }"></canvas>
+              <div class="vd-mood-badge" :class="doctorMood">
+                <span v-if="doctorMood==='speaking'">🌊 讲解中</span>
+                <span v-else-if="doctorMood==='listening'">👂 聆听中</span>
+                <span v-else-if="doctorMood==='thinking'">💭 思考中</span>
+                <span v-else>✨ 等待提问</span>
+              </div>
+              <div class="vd-glow" :class="{ active: isSpeaking }"></div>
+              <div class="vd-hint" v-if="!isSpeaking && !isListening && isReady">移动鼠标互动</div>
             </div>
-            <div class="vd-glow" :class="{ active: isSpeaking }"></div>
-            <div class="vd-hint" v-if="!isSpeaking && !isListening && isReady">移动鼠标互动</div>
+            <div class="vd-doctor-info">
+              <div class="vd-avatar"><div class="vd-avatar-ring"></div><span>👨‍⚕️</span></div>
+              <div class="vd-info-text">
+                <h3>老中医</h3>
+                <p>资深中医顾问</p>
+              </div>
+              <div class="vd-signal"><span></span><span></span><span></span><span></span></div>
+            </div>
           </div>
-          <div class="vd-doctor-info">
-            <div class="vd-avatar"><div class="vd-avatar-ring"></div><span>👨‍⚕️</span></div>
-            <div class="vd-info-text">
-              <h3>老中医</h3>
+
+          <div 
+            class="vd-user-video" 
+            :class="{ active: isCameraOn, dragging: isDragging }"
+            :style="{ left: videoPos.x + 'px', top: videoPos.y + 'px' }"
+            @mousedown="onVideoDragStart"
+            @touchstart="onVideoTouchStart"
+          >
+            <div class="vd-drag-handle" v-if="isCameraOn">
+              <span class="vd-drag-dots">⠿</span>
             </div>
-            <div class="vd-signal"><span></span><span></span><span></span><span></span></div>
+            <div class="vd-user-video-inner">
+              <video ref="userVideoRef" class="vd-user-cam" autoplay playsinline muted></video>
+              <div class="vd-user-placeholder" v-if="!isCameraOn">
+                <div class="vd-user-avatar">
+                  <span>👤</span>
+                </div>
+                <p class="vd-user-name">我的视频</p>
+                <button class="vd-cam-btn" @click="startCamera" :disabled="isCameraLoading">
+                  <span v-if="isCameraLoading">⏳</span>
+                  <span v-else>📹 开启摄像头</span>
+                </button>
+                <p class="vd-cam-error" v-if="cameraError">{{ cameraError }}</p>
+              </div>
+              <div class="vd-user-controls" v-if="isCameraOn">
+                <button class="vd-ctrl-btn close" @click="stopCamera" title="关闭摄像头">
+                  <span>✕</span>
+                </button>
+              </div>
+              <div class="vd-user-label">
+                <span class="vd-live-dot"></span>
+                <span>我</span>
+              </div>
+              <div class="vd-user-mic" v-if="isCameraOn">
+                <button 
+                  class="vd-mic-btn" 
+                  :class="{ listening: isListening }" 
+                  @click="isListening ? stopListening() : startListening()" 
+                  :disabled="isSpeaking"
+                  title="语音输入"
+                >
+                  <div class="vd-mic-pulse" v-if="isListening"></div>
+                  <span class="vd-mic-icon">{{ isListening ? '🔊' : '🎤' }}</span>
+                </button>
+                <span class="vd-mic-label" v-if="isListening">录音中</span>
+              </div>
+              <div class="vd-user-voice-text" v-if="isCameraOn && isListening && voiceText">
+                <span>{{ voiceText }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -833,6 +1212,35 @@ watch(() => props.show, (v) => { if (v && !isCalling.value) startCall() })
                 <div class="vd-typing-text">{{ currentText.substring(0, 80) }}<span class="vd-cursor">|</span></div>
               </div>
             </div>
+            
+            <transition name="voice-tip">
+              <div class="vd-voice-tip" v-if="showVoiceTip">
+                <div class="vd-voice-tip-header">
+                  <div class="vd-voice-wave">
+                    <span v-for="i in 5" :key="i" :style="{ height: (audioLevel / 100 * 20 + 4) + 'px' }"></span>
+                  </div>
+                  <span class="vd-voice-tip-title">
+                    {{ isVoiceDetected ? '正在识别...' : '正在聆听...' }}
+                  </span>
+                  <div class="vd-volume-bar">
+                    <div class="vd-volume-fill" :style="{ width: audioLevel + '%' }"></div>
+                  </div>
+                </div>
+                <div class="vd-voice-tip-content">
+                  <span class="vd-voice-text" v-if="voiceText">{{ voiceText }}</span>
+                  <span class="vd-voice-placeholder" v-else>
+                    <span class="vd-blink">请开始说话</span>
+                  </span>
+                </div>
+                <div class="vd-voice-tip-footer">
+                  <div class="vd-voice-status">
+                    <span class="vd-status-dot" :class="{ active: isVoiceDetected }"></span>
+                    <span>{{ isVoiceDetected ? '已检测到声音' : '等待声音输入...' }}</span>
+                  </div>
+                  <button class="vd-voice-cancel" @click="stopListening">取消</button>
+                </div>
+              </div>
+            </transition>
           </div>
           <div class="vd-quick" v-if="!isSpeaking && !isListening">
             <span>⚡ 快捷提问</span>
@@ -854,6 +1262,10 @@ watch(() => props.show, (v) => { if (v && !isCalling.value) startCall() })
 
       <div class="vd-footer">
         <div class="vd-ctrls">
+          <button :class="['vd-ctrl', { active: isCameraOn }]" @click="toggleCamera" :disabled="isCameraLoading">
+            <span v-if="isCameraLoading">⏳</span>
+            <span v-else>{{ isCameraOn ? '📹 关闭摄像头' : '📹 开启摄像头' }}</span>
+          </button>
           <button :class="['vd-ctrl', { active: isListening }]" @click="isListening ? stopListening() : startListening()" :disabled="isSpeaking">🎤 {{ isListening ? '录音中' : '麦克风' }}</button>
           <button :class="['vd-ctrl', { muted: isSpeaking }]" @click="isSpeaking ? stopSpeaking() : null" :disabled="!isSpeaking">🔊 {{ isSpeaking ? '静音' : '扬声器' }}</button>
         </div>
@@ -865,104 +1277,161 @@ watch(() => props.show, (v) => { if (v && !isCalling.value) startCall() })
 <style scoped>
 .vd-modal{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center}
 .vd-overlay{position:absolute;inset:0;background:rgba(240,237,232,.65);backdrop-filter:blur(12px)}
-.vd-container{position:relative;width:95%;max-width:1200px;height:90vh;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.08);display:flex;flex-direction:column;border:1px solid rgba(0,0,0,.06)}
-.vd-header{background:#fff;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0eeeb}
+.vd-container{position:relative;width:98%;max-width:1400px;height:92vh;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.08);display:flex;flex-direction:column;border:1px solid rgba(0,0,0,.06)}
+.vd-header{background:#fff;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0eeeb}
 .vd-header-left{display:flex;align-items:center;gap:16px}
-.vd-status{display:flex;align-items:center;gap:8px;color:#8c8578;font-size:13px}
+.vd-status{display:flex;align-items:center;gap:8px;color:#8c8578;font-size:14px}
 .vd-status.active{color:#2D5016}
 .vd-pulse{width:10px;height:10px;border-radius:50%;background:#4ade80;animation:vd-p 2s infinite}
 @keyframes vd-p{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
-.vd-timer{color:#8c8578;font-size:13px;font-variant-numeric:tabular-nums}
-.vd-end-btn{background:#C14443;color:#fff;border:none;padding:10px 24px;border-radius:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .3s;font-size:13px}
+.vd-timer{color:#8c8578;font-size:14px;font-variant-numeric:tabular-nums}
+.vd-end-btn{background:#C14443;color:#fff;border:none;padding:12px 28px;border-radius:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .3s;font-size:14px}
 .vd-end-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(193,68,67,.2)}
 .vd-body{flex:1;display:flex;overflow:hidden}
-.vd-video{flex:0 0 440px;background:#FAFAF8;display:flex;flex-direction:column;border-right:1px solid #f0eeeb}
-.vd-canvas-wrap{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:16px;overflow:hidden;background:linear-gradient(180deg,#FAFAF8 0%,#F5F3EF 100%)}
-.vd-canvas{border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06),0 0 0 1px rgba(0,0,0,.04);transition:all .4s;cursor:move}
-.vd-canvas.speaking{box-shadow:0 2px 12px rgba(0,0,0,.06),0 0 16px rgba(45,80,22,.1)}
-.vd-canvas.listening{box-shadow:0 2px 12px rgba(0,0,0,.06),0 0 16px rgba(59,130,246,.08)}
-.vd-mood-badge{position:absolute;top:28px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.92);color:#6B5D4D;padding:7px 18px;border-radius:20px;font-size:12px;font-weight:600;backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.06);transition:all .3s;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.04)}
-.vd-mood-badge.speaking{background:rgba(45,80,22,.92);color:#fff;border-color:rgba(74,124,44,.3)}
-.vd-mood-badge.listening{background:rgba(59,130,246,.92);color:#fff;border-color:rgba(96,165,250,.3)}
-.vd-mood-badge.thinking{background:rgba(193,68,67,.92);color:#fff;border-color:rgba(232,90,89,.3)}
-.vd-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.05) 0%,transparent 70%);pointer-events:none;opacity:.5;transition:all .5s}
-.vd-glow.active{background:radial-gradient(circle,rgba(45,80,22,.06) 0%,transparent 70%);opacity:1;animation:vd-gp 2s ease-in-out infinite}
+.vd-main-content{flex:0 0 520px;position:relative;background:linear-gradient(180deg,#FAFAF8 0%,#F5F3EF 100%);border-right:1px solid #f0eeeb}
+.vd-doctor-section{height:100%;display:flex;flex-direction:column}
+.vd-canvas-wrap{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:20px;overflow:hidden}
+.vd-canvas{border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.04);transition:all .4s;cursor:move;max-width:100%;max-height:100%}
+.vd-canvas.speaking{box-shadow:0 4px 20px rgba(0,0,0,.08),0 0 24px rgba(45,80,22,.15)}
+.vd-canvas.listening{box-shadow:0 4px 20px rgba(0,0,0,.08),0 0 24px rgba(59,130,246,.12)}
+.vd-mood-badge{position:absolute;top:24px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.95);color:#6B5D4D;padding:8px 20px;border-radius:24px;font-size:13px;font-weight:600;backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.06);transition:all .3s;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.vd-mood-badge.speaking{background:rgba(45,80,22,.95);color:#fff;border-color:rgba(74,124,44,.3)}
+.vd-mood-badge.listening{background:rgba(59,130,246,.95);color:#fff;border-color:rgba(96,165,250,.3)}
+.vd-mood-badge.thinking{background:rgba(193,68,67,.95);color:#fff;border-color:rgba(232,90,89,.3)}
+.vd-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.05) 0%,transparent 70%);pointer-events:none;opacity:.5;transition:all .5s}
+.vd-glow.active{background:radial-gradient(circle,rgba(45,80,22,.08) 0%,transparent 70%);opacity:1;animation:vd-gp 2s ease-in-out infinite}
 @keyframes vd-gp{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.15)}}
-.vd-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.88);color:#8c8578;padding:5px 14px;border-radius:14px;font-size:11px;backdrop-filter:blur(6px);border:1px solid rgba(0,0,0,.05);animation:vd-hf 3s ease-in-out infinite}
+.vd-hint{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.9);color:#8c8578;padding:6px 16px;border-radius:16px;font-size:12px;backdrop-filter:blur(6px);border:1px solid rgba(0,0,0,.05);animation:vd-hf 3s ease-in-out infinite}
 @keyframes vd-hf{0%,100%{opacity:.8}50%{opacity:.4}}
-.vd-doctor-info{padding:12px 20px;background:#fff;display:flex;align-items:center;gap:12px;border-top:1px solid #f0eeeb}
-.vd-avatar{position:relative;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.vd-doctor-info{padding:14px 20px;background:#fff;display:flex;align-items:center;gap:12px;border-top:1px solid #f0eeeb}
+.vd-avatar{position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px}
 .vd-avatar-ring{position:absolute;inset:-3px;border-radius:50%;background:linear-gradient(135deg,#6B4423,#A67C52);animation:vd-ar 3s linear infinite}
 @keyframes vd-ar{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .vd-avatar span{position:relative;z-index:1}
-.vd-info-text h3{color:#2C2416;font-size:14px;margin:0;font-weight:700}
-.vd-info-text p{color:#8c8578;font-size:11px;margin:0}
-.vd-signal{margin-left:auto;display:flex;gap:2px;align-items:flex-end;height:14px}
-.vd-signal span{width:3px;background:#2D5016;border-radius:1px}
-.vd-signal span:nth-child(1){height:4px}
-.vd-signal span:nth-child(2){height:7px}
+.vd-info-text h3{color:#2C2416;font-size:15px;margin:0;font-weight:700}
+.vd-info-text p{color:#8c8578;font-size:11px;margin:3px 0 0}
+.vd-signal{margin-left:auto;display:flex;gap:3px;align-items:flex-end;height:14px}
+.vd-signal span{width:4px;background:#2D5016;border-radius:1px}
+.vd-signal span:nth-child(1){height:5px}
+.vd-signal span:nth-child(2){height:8px}
 .vd-signal span:nth-child(3){height:11px}
 .vd-signal span:nth-child(4){height:14px}
-.vd-chat{flex:1;display:flex;flex-direction:column;background:#fff}
-.vd-chat-head{padding:14px 22px;background:#FAFAF8;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0eeeb}
-.vd-chat-head h3{color:#2C2416;font-size:15px;margin:0;display:flex;align-items:center;gap:8px;font-weight:700}
-.vd-msg-count{font-size:11px;color:#8c8578;background:#f5f3ef;padding:2px 8px;border-radius:10px}
-.vd-clear{background:#f5f3ef;border:1px solid rgba(0,0,0,.06);color:#8c8578;padding:6px 12px;border-radius:8px;cursor:pointer;transition:all .2s;font-size:13px}
+.vd-user-video{position:absolute;width:220px;height:165px;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:10;border:3px solid rgba(255,255,255,.9);cursor:grab;user-select:none;-webkit-user-select:none}
+.vd-user-video.dragging{cursor:grabbing;box-shadow:0 12px 40px rgba(0,0,0,.25);transition:none}
+.vd-user-video:not(.dragging){transition:box-shadow .3s,border-color .3s}
+.vd-user-video.active{border-color:#4ade80}
+.vd-user-video.active:hover{box-shadow:0 8px 32px rgba(45,80,22,.2)}
+.vd-drag-handle{position:absolute;top:0;left:0;right:0;height:24px;background:linear-gradient(180deg,rgba(0,0,0,.4),transparent);z-index:5;display:flex;align-items:center;justify-content:center;border-radius:13px 13px 0 0;opacity:0;transition:opacity .2s}
+.vd-user-video:hover .vd-drag-handle,.vd-user-video.dragging .vd-drag-handle{opacity:1}
+.vd-drag-dots{color:rgba(255,255,255,.7);font-size:14px;letter-spacing:2px;line-height:1}
+.vd-user-video-inner{position:relative;width:100%;height:100%;background:linear-gradient(135deg,#2C2416,#3D3020)}
+.vd-user-cam{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
+.vd-user-video.active .vd-user-cam{opacity:1}
+.vd-user-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;padding:16px}
+.vd-user-avatar{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:26px}
+.vd-user-name{font-size:13px;color:rgba(255,255,255,.8);margin:0}
+.vd-cam-btn{background:linear-gradient(135deg,#6B4423,#8B5E3C);border:none;color:#fff;padding:10px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .3s;display:flex;align-items:center;gap:6px}
+.vd-cam-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 12px rgba(107,68,35,.4)}
+.vd-cam-btn:disabled{opacity:.6;cursor:not-allowed}
+.vd-cam-error{font-size:10px;color:#f87171;margin:0;text-align:center}
+.vd-user-controls{position:absolute;top:8px;right:8px}
+.vd-ctrl-btn{width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:12px}
+.vd-ctrl-btn:hover{background:rgba(193,68,67,.9);transform:scale(1.1)}
+.vd-user-label{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.6);color:#fff;padding:4px 10px;border-radius:10px;font-size:11px;display:flex;align-items:center;gap:5px}
+.vd-live-dot{width:6px;height:6px;border-radius:50%;background:#ef4444;animation:vd-ld 1.5s infinite}
+@keyframes vd-ld{0%,100%{opacity:1}50%{opacity:.4}}
+.vd-user-mic{position:absolute;bottom:8px;right:8px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:5}
+.vd-mic-btn{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.3);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s;position:relative;font-size:16px}
+.vd-mic-btn:hover:not(:disabled){background:rgba(59,130,246,.7);border-color:rgba(59,130,246,.8);transform:scale(1.1)}
+.vd-mic-btn:disabled{opacity:.4;cursor:not-allowed}
+.vd-mic-btn.listening{background:rgba(193,68,67,.7);border-color:rgba(239,68,68,.6);animation:vd-mic-p 1.5s infinite}
+@keyframes vd-mic-p{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+.vd-mic-pulse{position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(239,68,68,.5);animation:vd-mp2 1s ease-out infinite}
+@keyframes vd-mp2{0%{transform:scale(1);opacity:1}100%{transform:scale(1.5);opacity:0}}
+.vd-mic-icon{position:relative;z-index:1}
+.vd-mic-label{font-size:9px;color:#fff;background:rgba(239,68,68,.7);padding:2px 8px;border-radius:8px;white-space:nowrap;letter-spacing:1px}
+.vd-user-voice-text{position:absolute;bottom:50px;left:8px;right:50px;background:rgba(0,0,0,.65);color:#fff;padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.5;backdrop-filter:blur(4px);max-height:60px;overflow:hidden;word-break:break-all}
+.vd-chat{flex:1;display:flex;flex-direction:column;background:#fff;min-width:0}
+.vd-chat-head{padding:18px 28px;background:#FAFAF8;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f0eeeb}
+.vd-chat-head h3{color:#2C2416;font-size:17px;margin:0;display:flex;align-items:center;gap:10px;font-weight:700}
+.vd-msg-count{font-size:12px;color:#8c8578;background:#f5f3ef;padding:3px 10px;border-radius:12px}
+.vd-clear{background:#f5f3ef;border:1px solid rgba(0,0,0,.06);color:#8c8578;padding:8px 14px;border-radius:10px;cursor:pointer;transition:all .2s;font-size:14px}
 .vd-clear:hover{background:rgba(193,68,67,.06);color:#C14443;border-color:rgba(193,68,67,.12)}
-.chat-msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;background:#fff}
-.chat-msgs::-webkit-scrollbar{width:5px}
-.chat-msgs::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:3px}
-.vd-msg{display:flex;gap:10px;max-width:88%;animation:vd-si .3s ease}
+.chat-msgs{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:18px;background:#fff}
+.chat-msgs::-webkit-scrollbar{width:6px}
+.chat-msgs::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:3px}
+.vd-msg{display:flex;gap:12px;max-width:85%;animation:vd-si .3s ease}
 .vd-msg.user{align-self:flex-end;flex-direction:row-reverse}
 @keyframes vd-si{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.vd-msg-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.vd-msg-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
 .vd-msg.doctor .vd-msg-avatar{background:linear-gradient(135deg,#6B4423,#A67C52)}
 .vd-msg.user .vd-msg-avatar{background:linear-gradient(135deg,#3b82f6,#2563eb)}
 .vd-msg-body{flex:1;min-width:0}
-.vd-msg-head{display:flex;justify-content:space-between;margin-bottom:4px}
-.vd-msg-name{font-size:12px;font-weight:600;color:#6B4423}
+.vd-msg-head{display:flex;justify-content:space-between;margin-bottom:6px}
+.vd-msg-name{font-size:13px;font-weight:600;color:#6B4423}
 .vd-msg.user .vd-msg-name{color:#3b82f6}
-.vd-msg-time{font-size:10px;color:#b5aea5}
-.vd-msg-text{background:#F7F5F2;padding:10px 14px;border-radius:14px;color:#2C2416;line-height:1.65;font-size:13px;word-break:break-word;border:1px solid rgba(0,0,0,.04)}
+.vd-msg-time{font-size:11px;color:#b5aea5}
+.vd-msg-text{background:#F7F5F2;padding:14px 18px;border-radius:16px;color:#2C2416;line-height:1.75;font-size:14px;word-break:break-word;border:1px solid rgba(0,0,0,.04)}
 .vd-msg.user .vd-msg-text{background:linear-gradient(135deg,#3b82f6,#2563eb);border-color:transparent;color:#fff}
 .vd-msg-text :deep(strong){color:#6B4423;font-weight:700}
 .vd-msg.user .vd-msg-text :deep(strong){color:#fff}
-.vd-dots{display:flex;gap:5px;margin-bottom:8px;padding:6px 0}
-.vd-dots span{width:7px;height:7px;border-radius:50%;background:#6B4423;animation:vd-db 1.4s ease-in-out infinite}
+.vd-dots{display:flex;gap:6px;margin-bottom:10px;padding:8px 0}
+.vd-dots span{width:8px;height:8px;border-radius:50%;background:#6B4423;animation:vd-db 1.4s ease-in-out infinite}
 .vd-dots span:nth-child(2){animation-delay:.2s}
 .vd-dots span:nth-child(3){animation-delay:.4s}
 @keyframes vd-db{0%,80%,100%{transform:scale(.5);opacity:.3}40%{transform:scale(1);opacity:1}}
-.vd-typing-text{font-size:12px;color:#8c8578;line-height:1.5;max-height:50px;overflow:hidden}
+.vd-typing-text{font-size:13px;color:#8c8578;line-height:1.5;max-height:60px;overflow:hidden}
 .vd-cursor{color:#2D5016;font-weight:700;animation:vd-cb 1s step-end infinite}
 @keyframes vd-cb{0%,100%{opacity:1}50%{opacity:0}}
-.vd-quick{padding:10px 18px;background:#FAFAF8;border-top:1px solid #f0eeeb;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.vd-quick span{color:#6B4423;font-size:12px;font-weight:600}
-.vd-quick button{background:#f5f3ef;border:1px solid rgba(0,0,0,.06);color:#6B4423;padding:5px 12px;border-radius:14px;font-size:11px;cursor:pointer;transition:all .2s}
+
+.vd-voice-tip{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);width:90%;max-width:400px;background:linear-gradient(135deg,rgba(59,130,246,.95),rgba(37,99,235,.95));border-radius:20px;padding:20px 24px;box-shadow:0 12px 40px rgba(59,130,246,.3);z-index:20;border:1px solid rgba(255,255,255,.2)}
+.vd-voice-tip-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.vd-voice-wave{display:flex;align-items:center;gap:3px;height:24px;min-width:40px}
+.vd-voice-wave span{width:4px;background:rgba(255,255,255,.9);border-radius:2px;transition:height .05s ease;min-height:4px}
+.vd-voice-tip-title{color:#fff;font-size:15px;font-weight:600;letter-spacing:1px;flex:1}
+.vd-volume-bar{width:60px;height:6px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden}
+.vd-volume-fill{height:100%;background:linear-gradient(90deg,#4ade80,#22c55e);border-radius:3px;transition:width .05s ease}
+.vd-voice-tip-content{background:rgba(255,255,255,.15);border-radius:12px;padding:16px;min-height:60px;margin-bottom:14px;backdrop-filter:blur(4px)}
+.vd-voice-text{color:#fff;font-size:16px;line-height:1.6;word-break:break-word}
+.vd-voice-placeholder{color:rgba(255,255,255,.7);font-size:14px}
+.vd-blink{animation:vd-blink 1.5s ease-in-out infinite}
+@keyframes vd-blink{0%,100%{opacity:1}50%{opacity:.4}}
+.vd-voice-tip-footer{display:flex;justify-content:space-between;align-items:center}
+.vd-voice-status{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.8);font-size:12px}
+.vd-status-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4);transition:all .2s}
+.vd-status-dot.active{background:#4ade80;box-shadow:0 0 8px #4ade80}
+.vd-voice-cancel{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 16px;border-radius:16px;font-size:12px;cursor:pointer;transition:all .2s}
+.vd-voice-cancel:hover{background:rgba(255,255,255,.3)}
+.voice-tip-enter-active,.voice-tip-leave-active{transition:all .3s ease}
+.voice-tip-enter-from,.voice-tip-leave-to{opacity:0;transform:translateX(-50%) translateY(20px) scale(.95)}
+.vd-quick{padding:14px 24px;background:#FAFAF8;border-top:1px solid #f0eeeb;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.vd-quick span{color:#6B4423;font-size:13px;font-weight:600}
+.vd-quick button{background:#f5f3ef;border:1px solid rgba(0,0,0,.06);color:#6B4423;padding:7px 14px;border-radius:16px;font-size:12px;cursor:pointer;transition:all .2s}
 .vd-quick button:hover{background:#6B4423;color:#fff;border-color:#6B4423;transform:translateY(-1px)}
-.vd-input{padding:14px 18px;background:#FAFAF8;border-top:1px solid #f0eeeb}
-.vd-input :deep(.el-textarea__inner){background:#fff;border:1.5px solid #e8e5e0;color:#2C2416;border-radius:12px;resize:none;font-size:13px}
-.vd-input :deep(.el-textarea__inner):focus{border-color:#6B4423;box-shadow:0 0 0 2px rgba(107,68,35,.06)}
+.vd-input{padding:18px 24px;background:#FAFAF8;border-top:1px solid #f0eeeb}
+.vd-input :deep(.el-textarea__inner){background:#fff;border:2px solid #e8e5e0;color:#2C2416;border-radius:14px;resize:none;font-size:14px;padding:14px}
+.vd-input :deep(.el-textarea__inner):focus{border-color:#6B4423;box-shadow:0 0 0 3px rgba(107,68,35,.08)}
 .vd-input :deep(.el-textarea__inner)::placeholder{color:#b5aea5}
-.vd-input-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;align-items:center}
-.vd-mic{width:42px;height:42px;border-radius:50%;background:rgba(59,130,246,.06);border:1.5px solid rgba(59,130,246,.15);color:#3b82f6;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s;font-size:18px}
-.vd-mic:hover:not(:disabled){background:rgba(59,130,246,.1);transform:scale(1.05)}
-.vd-mic.listening{background:rgba(193,68,67,.06);border-color:rgba(193,68,67,.2);color:#C14443;animation:vd-mp 1.5s infinite}
+.vd-input-btns{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;align-items:center}
+.vd-mic{width:48px;height:48px;border-radius:50%;background:rgba(59,130,246,.08);border:2px solid rgba(59,130,246,.2);color:#3b82f6;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s;font-size:20px}
+.vd-mic:hover:not(:disabled){background:rgba(59,130,246,.12);transform:scale(1.05)}
+.vd-mic.listening{background:rgba(193,68,67,.08);border-color:rgba(193,68,67,.25);color:#C14443;animation:vd-mp 1.5s infinite}
 .vd-mic:disabled{opacity:.4;cursor:not-allowed}
-@keyframes vd-mp{0%,100%{box-shadow:0 0 0 0 rgba(193,68,67,.15)}50%{box-shadow:0 0 0 10px rgba(193,68,67,0)}}
-.vd-wave{display:inline-block;width:3px;height:14px;background:#C14443;border-radius:2px;margin:0 2px;animation:vd-wa .8s ease-in-out infinite}
-.vd-wave:nth-child(2){animation-delay:.15s;height:18px}
-.vd-wave:nth-child(3){animation-delay:.3s;height:12px}
+@keyframes vd-mp{0%,100%{box-shadow:0 0 0 0 rgba(193,68,67,.15)}50%{box-shadow:0 0 0 12px rgba(193,68,67,0)}}
+.vd-wave{display:inline-block;width:4px;height:16px;background:#C14443;border-radius:2px;margin:0 2px;animation:vd-wa .8s ease-in-out infinite}
+.vd-wave:nth-child(2){animation-delay:.15s;height:20px}
+.vd-wave:nth-child(3){animation-delay:.3s;height:14px}
 @keyframes vd-wa{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.4)}}
-.vd-send{background:#6B4423;border:none;color:#fff;padding:10px 24px;border-radius:12px;font-weight:700;cursor:pointer;transition:all .3s;font-size:13px}
-.vd-send:hover:not(:disabled){background:#8B5E3C;transform:translateY(-2px);box-shadow:0 4px 12px rgba(107,68,35,.15)}
+.vd-send{background:#6B4423;border:none;color:#fff;padding:12px 28px;border-radius:14px;font-weight:700;cursor:pointer;transition:all .3s;font-size:14px}
+.vd-send:hover:not(:disabled){background:#8B5E3C;transform:translateY(-2px);box-shadow:0 6px 16px rgba(107,68,35,.2)}
 .vd-send:disabled{opacity:.4;cursor:not-allowed}
-.vd-stop{background:rgba(193,68,67,.06);border:1px solid rgba(193,68,67,.12);color:#C14443;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px}
-.vd-stop:hover{background:rgba(193,68,67,.1)}
-.vd-footer{background:#fff;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f0eeeb}
-.vd-ctrls{display:flex;gap:10px}
-.vd-ctrl{background:#f5f3ef;border:1px solid rgba(0,0,0,.06);color:#6B5D4D;padding:8px 18px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;transition:all .2s}
+.vd-stop{background:rgba(193,68,67,.08);border:1px solid rgba(193,68,67,.15);color:#C14443;padding:10px 16px;border-radius:10px;cursor:pointer;font-size:13px}
+.vd-stop:hover{background:rgba(193,68,67,.12)}
+.vd-footer{background:#fff;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f0eeeb}
+.vd-ctrls{display:flex;gap:12px}
+.vd-ctrl{background:#f5f3ef;border:1px solid rgba(0,0,0,.06);color:#6B5D4D;padding:10px 20px;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;transition:all .2s}
 .vd-ctrl:hover:not(:disabled){background:#eae7e2;color:#2C2416}
-.vd-ctrl.active{background:rgba(59,130,246,.06);border-color:rgba(59,130,246,.15);color:#3b82f6}
-.vd-ctrl.muted{background:rgba(193,68,67,.06);border-color:rgba(193,68,67,.12);color:#C14443}
+.vd-ctrl.active{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.2);color:#3b82f6}
+.vd-ctrl.muted{background:rgba(193,68,67,.08);border-color:rgba(193,68,67,.15);color:#C14443}
 .vd-ctrl:disabled{opacity:.3;cursor:not-allowed}
 </style>
