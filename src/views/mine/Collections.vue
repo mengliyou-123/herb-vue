@@ -271,23 +271,78 @@ const deletePost = async (postId) => {
 }
 
 .page-header {
-  background: $color-primary-gradient;
-  padding: 32px 40px;
+  max-width: 1600px;
+  margin: 24px auto 0;
+  padding: 0 24px;
+  background: linear-gradient(135deg, #5b7c9d 0%, #6a8b9f 100%);
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -5%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 50%;
+  }
+
   .header-content {
+    padding: 36px 16px;
     display: flex;
     align-items: center;
-    gap: 16px;
-    .header-icon { font-size: 42px; }
+    gap: 20px;
+    position: relative;
+    z-index: 1;
+
+    .header-icon {
+      font-size: 48px;
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+      animation: float 3s ease-in-out infinite;
+    }
+
     .header-text {
-      h1 { color: #fff; font-size: 26px; margin: 0 0 6px; letter-spacing: 2px; }
-      p { color: rgba(255,255,255,0.8); font-size: 14px; margin: 0; }
+      h1 {
+        color: #fff;
+        font-size: 32px;
+        margin: 0 0 8px;
+        letter-spacing: 2px;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 15px;
+        margin: 0;
+        font-weight: 400;
+      }
     }
   }
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
 .page-body {
   padding: 24px;
-  max-width: 1200px;
+  max-width: 1648px;
   margin: 0 auto;
 }
 
