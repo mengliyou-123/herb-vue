@@ -433,7 +433,7 @@ const featureDetails = {
       <div class="footer-content">
         <p class="footer-text">百草居 - 传承千年智慧 · 守护健康本源</p>
         <div class="footer-divider"></div>
-        <p class="footer-copyright">© 2025 Baicaoju. All rights reserved.</p>
+        <p class="footer-copyright">© 2026 Baicaoju. All rights reserved.</p>
       </div>
     </footer>
   </div>
