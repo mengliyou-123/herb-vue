@@ -28,6 +28,54 @@
     <div class="graph-main" v-loading="loading" element-loading-text="正在加载知识图谱...">
       <div ref="graphRef" class="graph-chart"></div>
 
+      <div class="floating-search">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索中药、方剂、病症..."
+          :prefix-icon="Search"
+          clearable
+          @input="handleSearch"
+          @clear="clearSearch"
+          class="search-input"
+        />
+        <transition name="search-fade">
+          <div class="search-results" v-if="showSearchPanel && searchResults.length > 0">
+            <div class="search-results-header">
+              <span>找到 {{ searchResults.length }} 个结果</span>
+              <button class="search-close" @click="showSearchPanel = false">✕</button>
+            </div>
+            <div class="search-results-list">
+              <div 
+                class="search-result-item" 
+                v-for="node in searchResults" 
+                :key="node.id"
+                @click="focusOnNode(node)"
+              >
+                <span class="result-dot" :style="{ backgroundColor: getNodeColor(node.category) }"></span>
+                <div class="result-info">
+                  <span class="result-name">{{ node.name }}</span>
+                  <span class="result-category">{{ node.category }}</span>
+                </div>
+                <span class="result-connections">{{ getNodeConnections(node.name) }} 关联</span>
+                <button 
+                  v-if="node.category === '中药'"
+                  class="result-goto" 
+                  @click="goToHerbDetail($event, node)"
+                  title="查看药材详情"
+                >
+                  → 详情
+                </button>
+              </div>
+            </div>
+          </div>
+        </transition>
+        <transition name="search-fade">
+          <div class="search-no-result" v-if="searchKeyword.trim() && searchResults.length === 0 && showSearchPanel">
+            <span>未找到匹配的节点</span>
+          </div>
+        </transition>
+      </div>
+
       <div class="floating-legend">
         <div class="legend-title">图例说明</div>
         <div class="legend-items">
@@ -99,6 +147,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
 import { knowledgeGraphService } from '@/api/graph'
+import { useRouter } from 'vue-router'
 import { 
   Refresh, 
   Download, 
@@ -107,14 +156,20 @@ import {
   HotWater,
   FirstAidKit,
   Link,
-  Connection
+  Connection,
+  Search
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+
+const router = useRouter()
 
 const graphRef = ref(null)
 const loading = ref(false)
 const detailVisible = ref(false)
 const selectedNode = ref(null)
+const searchKeyword = ref('')
+const searchResults = ref([])
+const showSearchPanel = ref(false)
 let chartInstance = null
 
 const categoryColors = [
@@ -143,23 +198,109 @@ const getNodeColor = (category) => {
   return found ? found.color : '#5470c6'
 }
 
+const handleSearch = () => {
+  const keyword = searchKeyword.value.trim()
+  if (!keyword) {
+    searchResults.value = []
+    showSearchPanel.value = false
+    return
+  }
+  
+  const kw = keyword.toLowerCase()
+  searchResults.value = graphData.value.nodes.filter(n => 
+    n.name.toLowerCase().includes(kw) || 
+    (n.category && n.category.toLowerCase().includes(kw)) ||
+    (n.description && n.description.toLowerCase().includes(kw))
+  ).slice(0, 20)
+  
+  showSearchPanel.value = searchResults.value.length > 0
+}
+
+const focusOnNode = (node) => {
+  if (!chartInstance) return
+  showSearchPanel.value = false
+  
+  const nodeIndex = graphData.value.nodes.findIndex(n => n.id == node.id)
+  if (nodeIndex === -1) return
+  
+  chartInstance.dispatchAction({
+    type: 'highlight',
+    seriesIndex: 0,
+    dataIndex: nodeIndex
+  })
+  
+  chartInstance.dispatchAction({
+    type: 'showTip',
+    seriesIndex: 0,
+    dataIndex: nodeIndex
+  })
+  
+  chartInstance.dispatchAction({
+    type: 'focusNodeAdjacency',
+    seriesIndex: 0,
+    dataIndex: nodeIndex
+  })
+  
+  selectedNode.value = node
+  detailVisible.value = true
+}
+
+const clearSearch = () => {
+  searchKeyword.value = ''
+  searchResults.value = []
+  showSearchPanel.value = false
+  
+  if (chartInstance) {
+    chartInstance.dispatchAction({
+      type: 'downplay',
+      seriesIndex: 0
+    })
+    chartInstance.dispatchAction({
+      type: 'unfocusNodeAdjacency',
+      seriesIndex: 0
+    })
+  }
+}
+
+const goToHerbDetail = (event, node) => {
+  event.stopPropagation()
+  if (node.category === '中药') {
+    const herb = graphData.value.nodes.find(n => n.name === node.name && n.category === '中药')
+    if (herb && herb.id !== undefined) {
+      const herbList = graphData.value.nodes.filter(n => n.category === '中药')
+      const herbIndex = herbList.findIndex(n => n.name === node.name)
+      if (herbIndex !== -1) {
+        router.push({ path: '/user/herbDetail', query: { id: herbIndex + 1 } })
+        return
+      }
+    }
+  }
+  ElMessage.info('仅支持跳转到中药详情页')
+}
+
 const getNodeConnections = (nodeName) => {
+  const node = graphData.value.nodes.find(n => n.name === nodeName)
+  if (!node) return 0
+  const nodeId = node.id
   return graphData.value.links.filter(
-    link => link.source === nodeName || link.target === nodeName
+    link => link.source == nodeId || link.target == nodeId
   ).length
 }
 
 const getRelatedNodes = (nodeName) => {
+  const node = graphData.value.nodes.find(n => n.name === nodeName)
+  if (!node) return []
+  const nodeId = node.id
   const related = []
   const links = graphData.value.links.filter(
-    link => link.source === nodeName || link.target === nodeName
+    link => link.source == nodeId || link.target == nodeId
   )
   
   links.forEach(link => {
-    const relatedName = link.source === nodeName ? link.target : link.source
-    const node = graphData.value.nodes.find(n => n.name === relatedName)
-    if (node && !related.find(r => r.name === node.name)) {
-      related.push(node)
+    const relatedId = link.source == nodeId ? link.target : link.source
+    const relatedNode = graphData.value.nodes.find(n => n.id == relatedId)
+    if (relatedNode && !related.find(r => r.name === relatedNode.name)) {
+      related.push(relatedNode)
     }
   })
   
@@ -222,11 +363,11 @@ const initChart = () => {
         type: 'graph',
         layout: 'force',
         force: {
-          repulsion: 450,
-          gravity: 0.08,
-          edgeLength: [120, 280],
-          layoutAnimation: true,
-          friction: 0.4
+          repulsion: 500,
+          gravity: 0.1,
+          edgeLength: [100, 200],
+          layoutAnimation: false,
+          friction: 0.6
         },
         data: graphData.value.nodes.map(node => ({
           id: node.id,
@@ -267,8 +408,14 @@ const initChart = () => {
         categories: categoryColors.map(c => ({ name: c.name })),
         roam: true,
         draggable: true,
+        moveLimit: { moveCenter: null }, 
+        scaleLimit: {
+          min: 0.1,
+          max: 5
+        },
+
         focusNodeAdjacency: true,
-        animation: true,
+        animation: false,
         animationDuration: 1500,
         animationEasingUpdate: 'cubicOut',
         emphasis: {
@@ -299,9 +446,13 @@ const initChart = () => {
     ]
   }
   
+  // 在初始配置中直接设置缩放级别
+  option.series[0].zoom = 0.6 // 设置初始缩放比例为60%
+  
   chartInstance.setOption(option)
   
   chartInstance.on('click', function(params) {
+    showSearchPanel.value = false
     if (params.dataType === 'node') {
       selectedNode.value = params.data
       detailVisible.value = true
@@ -450,6 +601,175 @@ onUnmounted(() => {
     .graph-chart {
       width: 100%;
       height: 100%;
+    }
+
+    .floating-search {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 280px;
+      z-index: 10;
+
+      .search-input {
+        :deep(.el-input__wrapper) {
+          border-radius: 10px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(8px);
+
+          &:focus-within {
+            border-color: #5470c6;
+            box-shadow: 0 4px 16px rgba(84, 112, 198, 0.2);
+          }
+        }
+      }
+
+      .search-results {
+        margin-top: 8px;
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        backdrop-filter: blur(8px);
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        max-height: 400px;
+
+        .search-results-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 14px;
+          border-bottom: 1px solid #f0f0f0;
+          font-size: 12px;
+          color: #999;
+
+          .search-close {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 6px;
+            border-radius: 4px;
+
+            &:hover {
+              background: #f0f0f0;
+              color: #333;
+            }
+          }
+        }
+
+        .search-results-list {
+          max-height: 340px;
+          overflow-y: auto;
+          padding: 6px;
+
+          &::-webkit-scrollbar {
+            width: 4px;
+          }
+
+          &::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 2px;
+          }
+        }
+
+        .search-result-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+
+          &:hover {
+            background: #f5f7fa;
+            transform: translateX(4px);
+          }
+
+          .result-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+          }
+
+          .result-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+
+            .result-name {
+              font-size: 13px;
+              font-weight: 600;
+              color: #333;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+
+            .result-category {
+              font-size: 11px;
+              color: #999;
+            }
+          }
+
+          .result-connections {
+            font-size: 11px;
+            color: #999;
+            background: #f5f7fa;
+            padding: 2px 8px;
+            border-radius: 10px;
+            white-space: nowrap;
+          }
+
+          .result-goto {
+            background: linear-gradient(135deg, #5470c6, #6b83d0);
+            border: none;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+
+            &:hover {
+              background: linear-gradient(135deg, #4060b6, #5a73c0);
+              transform: translateY(-1px);
+              box-shadow: 0 2px 8px rgba(84, 112, 198, 0.3);
+            }
+          }
+        }
+      }
+
+      .search-no-result {
+        margin-top: 8px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        text-align: center;
+        font-size: 13px;
+        color: #999;
+      }
+    }
+
+    .search-fade-enter-active,
+    .search-fade-leave-active {
+      transition: all 0.25s ease;
+    }
+
+    .search-fade-enter-from,
+    .search-fade-leave-to {
+      opacity: 0;
+      transform: translateY(-8px);
     }
 
     .floating-legend {
