@@ -8,7 +8,8 @@ import {
   postDetailService,
   addViewService,
   myPostService,
-  hotPostService
+  hotPostService,
+  postUpdateService
 } from "@/api/post.js";
 import { postCollListService, deleteByPostIdService } from "@/api/collections.js"
 import { deleteCommentsByPostIdService } from "@/api/comment.js"
@@ -69,14 +70,24 @@ const detail = async(id) => {
 
 const visibleDrawer = ref(false);
 const postModel = ref({});
+const isEditMode = ref(false);
+const currentEditPostId = ref(null);
 const uploadSuccess = (result) => {
   postModel.value.coverImg = result.data;
 };
 const addPost = async () => {
-  await postAddService(postModel.value);
-  ElMessage.success("发布成功");
+  if (isEditMode.value) {
+    await postUpdateService(postModel.value);
+    ElMessage.success("编辑成功");
+  } else {
+    await postAddService(postModel.value);
+    ElMessage.success("发布成功");
+  }
   visibleDrawer.value = false;
   await postList();
+  // 重置编辑模式状态
+  isEditMode.value = false;
+  currentEditPostId.value = null;
 };
 const showDrawer = () => {
   postModel.value = {
@@ -85,6 +96,20 @@ const showDrawer = () => {
     coverImg: "",
 
   }
+  visibleDrawer.value = true;
+};
+
+// 编辑帖子
+const editPost = (event, post) => {
+  event.stopPropagation();
+  isEditMode.value = true;
+  currentEditPostId.value = post.id;
+  postModel.value = {
+    id: post.id,
+    title: post.title,
+    content: post.content,
+    coverImg: post.coverImg
+  };
   visibleDrawer.value = true;
 };
 
@@ -346,14 +371,24 @@ const deletePost = (event, id) => {
                 <div class="post-content">
                   <div class="post-title-row">
                     <h2 class="post-title">{{ p.title }}</h2>
-                    <el-button
-                      v-if="isMyPost(p)"
-                      class="delete-btn"
-                      :icon="Delete"
-                      circle
-                      size="small"
-                      @click="deletePost($event, p.id)"
-                    />
+                    <div class="post-actions">
+                      <el-button
+                        v-if="isMyPost(p)"
+                        class="edit-btn"
+                        :icon="EditPen"
+                        circle
+                        size="small"
+                        @click="editPost($event, p)"
+                      />
+                      <el-button
+                        v-if="isMyPost(p)"
+                        class="delete-btn"
+                        :icon="Delete"
+                        circle
+                        size="small"
+                        @click="deletePost($event, p.id)"
+                      />
+                    </div>
                   </div>
 
                   <div class="post-meta">
@@ -524,8 +559,8 @@ const deletePost = (event, id) => {
       <template #header>
         <div class="drawer-custom-header">
           <span class="drawer-title-icon">✍️</span>
-          <h3 class="drawer-title">撰写新帖</h3>
-          <p class="drawer-subtitle">分享您的见解与心得</p>
+          <h3 class="drawer-title">{{ isEditMode ? '编辑帖子' : '撰写新帖' }}</h3>
+          <p class="drawer-subtitle">{{ isEditMode ? '修改您的帖子内容' : '分享您的见解与心得' }}</p>
         </div>
       </template>
 
@@ -574,8 +609,8 @@ const deletePost = (event, id) => {
 
         <el-form-item>
           <button type="button" class="submit-post-btn" @click="addPost()">
-            <span class="btn-icon">📮</span>
-            发布帖子
+            <span class="btn-icon">{{ isEditMode ? '💾' : '📮' }}</span>
+            {{ isEditMode ? '保存修改' : '发布帖子' }}
           </button>
         </el-form-item>
       </el-form>
@@ -1425,6 +1460,33 @@ const deletePost = (event, id) => {
       flex: 1;
 
       .teahouse-post-card:hover & { color: #8B4513; }
+    }
+
+    .post-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .edit-btn {
+      flex-shrink: 0;
+      background: rgba(82, 196, 26, 0.08);
+      border: 1px solid rgba(82, 196, 26, 0.2);
+      color: #4CAF50;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: scale(0.8);
+
+      .teahouse-post-card:hover & {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      &:hover {
+        background: #4CAF50;
+        border-color: #4CAF50;
+        color: #fff;
+        transform: scale(1.1);
+      }
     }
 
     .delete-btn {

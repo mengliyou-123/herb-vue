@@ -7,7 +7,8 @@ import {
   postDeleteService,
   postDetailService,
   addViewService,
-  myPostService
+  myPostService,
+  postUpdateService
 } from "@/api/post.js";
 import { postCollListService, deleteByPostIdService } from "@/api/collections.js";
 import { deleteCommentsByPostIdService } from "@/api/comment.js";
@@ -109,6 +110,8 @@ const deletePost = (id) => {
 //发帖
 const visibleDrawer = ref(false); //抽屉是否显示
 const postModel = ref({});
+const isEditMode = ref(false);
+const currentEditPostId = ref(null);
 const uploadSuccess = (result) => { //图片回显
   postModel.value.coverImg = result.data;
 };
@@ -118,15 +121,39 @@ const showDrawer = () => {
     content: "",
     coverImg: ""
   }
+  isEditMode.value = false;
+  currentEditPostId.value = null;
   // postModel.value.conten.setHTML('');
   // console.log(postModel.value.content)
   visibleDrawer.value = true;
 };
+
+// 编辑帖子
+const editPost = (event, post) => {
+  event.stopPropagation();
+  isEditMode.value = true;
+  currentEditPostId.value = post.id;
+  postModel.value = {
+    id: post.id,
+    title: post.title,
+    content: post.content,
+    coverImg: post.coverImg
+  };
+  visibleDrawer.value = true;
+};
 const addPost = async () => {
-  await postAddService(postModel.value);
-  ElMessage.success("添加成功");
+  if (isEditMode.value) {
+    await postUpdateService(postModel.value);
+    ElMessage.success("编辑成功");
+  } else {
+    await postAddService(postModel.value);
+    ElMessage.success("添加成功");
+  }
   visibleDrawer.value = false;
   await postList();
+  // 重置编辑模式状态
+  isEditMode.value = false;
+  currentEditPostId.value = null;
 };
 </script>
 
@@ -143,8 +170,15 @@ const addPost = async () => {
             </div>
             <div style="margin: 30px 20px;">
                 <div style="display: flex">
-                    <div style="font-size: 18px;color: #000000;cursor: pointer;width:390px"> {{p.title}} </div>
-                <div style="width:30px">
+                    <div style="font-size: 18px;color: #000000;cursor: pointer;width:360px"> {{p.title}} </div>
+                <div style="display:flex;gap:8px">
+                <el-button
+                :icon="EditPen"
+                circle
+                plain
+                type="primary"
+                @click="editPost($event, p)"
+                ></el-button>
                 <el-button
                 :icon="Delete"
                 circle
@@ -225,7 +259,7 @@ const addPost = async () => {
 </el-card>
 <el-drawer
     v-model="visibleDrawer"
-    title="发布讨论帖"
+    :title="isEditMode ? '编辑讨论帖' : '发布讨论帖'"
     direction="rtl"
     size="50%"
   >
@@ -273,7 +307,7 @@ const addPost = async () => {
       
       <el-form-item>
         <el-button @click="addPost()" style="background-color:#8B4513;color:white;">
-          确认
+          {{ isEditMode ? '保存修改' : '确认' }}
         </el-button>
     
       </el-form-item>

@@ -30,6 +30,11 @@ export const addViewService = (id) => {
     return request.put('/post?id=' + id)
 }
 
+//编辑帖子
+export const postUpdateService = (postData) => {
+  return request.put('/post/update', postData)
+}
+
 //浏览量前十
 export const hotPostService = () => {
     return request.get('/post/hot')
