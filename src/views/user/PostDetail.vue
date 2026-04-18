@@ -164,6 +164,20 @@ const publish = async () => {
   comment.value.content = "";
 }
 
+//删除评论
+const deleteComment = (commentId) => {
+  ElMessageBox.confirm("确定要删除这条评论吗？", "删除确认", {
+    confirmButtonText: "确定删除",
+    cancelButtonText: "取消",
+    type: "warning",
+    confirmButtonClass: "el-button--danger"
+  }).then(async () => {
+    await commentDeleteService(commentId);
+    ElMessage.success("删除成功");
+    await commentList();
+  }).catch(() => {});
+};
+
 //回复评论
 const replyComment = ref({});
 const visibleDrawer = ref(false);
@@ -300,13 +314,23 @@ const reply = async() => {
                 <span class="comment-time">{{ c.publishTime?.substring(0, 10) }}</span>
               </div>
               <div class="comment-text">{{ c.content }}</div>
-              <el-button 
-                link 
-                class="reply-btn"
-                @click="showReplyDrawer(c.id, 2)"
-              >
-                回复
-              </el-button>
+              <div class="comment-actions">
+                <el-button 
+                  link 
+                  class="reply-btn"
+                  @click="showReplyDrawer(c.id, 2)"
+                >
+                  回复
+                </el-button>
+                <el-button 
+                  v-if="c.publisherId == userInfoStore.userInfo.id || posterId == userInfoStore.userInfo.id"
+                  link 
+                  class="delete-btn"
+                  @click="deleteComment(c.id)"
+                >
+                  删除
+                </el-button>
+              </div>
             </div>
           </div>
 
@@ -328,13 +352,23 @@ const reply = async() => {
                   <span class="reply-time">{{ com.publishTime?.substring(0, 10) }}</span>
                 </div>
                 <div class="reply-text">{{ com.content }}</div>
-                <el-button 
-                  link 
-                  class="reply-btn-small"
-                  @click="showReplyDrawer(com.id, 3)"
-                >
-                  回复
-                </el-button>
+                <div class="reply-actions">
+                  <el-button 
+                    link 
+                    class="reply-btn-small"
+                    @click="showReplyDrawer(com.id, 3)"
+                  >
+                    回复
+                  </el-button>
+                  <el-button 
+                    v-if="com.publisherId == userInfoStore.userInfo.id || posterId == userInfoStore.userInfo.id"
+                    link 
+                    class="delete-btn-small"
+                    @click="deleteComment(com.id)"
+                  >
+                    删除
+                  </el-button>
+                </div>
               </div>
             </div>
 
@@ -356,13 +390,23 @@ const reply = async() => {
                   <span class="reply-time">{{ cc.publishTime?.substring(0, 10) }}</span>
                 </div>
                 <div class="reply-text">{{ cc.content }}</div>
-                <el-button 
-                  link 
-                  class="reply-btn-small"
-                  @click="showReplyDrawer(cc.id, 3)"
-                >
-                  回复
-                </el-button>
+                <div class="reply-actions">
+                  <el-button 
+                    link 
+                    class="reply-btn-small"
+                    @click="showReplyDrawer(cc.id, 3)"
+                  >
+                    回复
+                  </el-button>
+                  <el-button 
+                    v-if="cc.publisherId == userInfoStore.userInfo.id || posterId == userInfoStore.userInfo.id"
+                    link 
+                    class="delete-btn-small"
+                    @click="deleteComment(cc.id)"
+                  >
+                    删除
+                  </el-button>
+                </div>
               </div>
             </div>
           </div>
@@ -707,6 +751,11 @@ const reply = async() => {
         margin-bottom: 8px;
       }
 
+      .comment-actions {
+        display: flex;
+        gap: 8px;
+      }
+
       .reply-btn {
         padding: 4px 8px;
         font-size: 13px;
@@ -714,6 +763,16 @@ const reply = async() => {
 
         &:hover {
           color: #4f46e5;
+        }
+      }
+
+      .delete-btn {
+        padding: 4px 8px;
+        font-size: 13px;
+        color: #ef4444;
+
+        &:hover {
+          color: #dc2626;
         }
       }
     }
@@ -784,6 +843,11 @@ const reply = async() => {
         margin-bottom: 6px;
       }
 
+      .reply-actions {
+        display: flex;
+        gap: 6px;
+      }
+
       .reply-btn-small {
         padding: 2px 6px;
         font-size: 12px;
@@ -791,6 +855,16 @@ const reply = async() => {
 
         &:hover {
           color: #4f46e5;
+        }
+      }
+
+      .delete-btn-small {
+        padding: 2px 6px;
+        font-size: 12px;
+        color: #ef4444;
+
+        &:hover {
+          color: #dc2626;
         }
       }
     }
