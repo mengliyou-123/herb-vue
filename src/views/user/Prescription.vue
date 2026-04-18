@@ -385,7 +385,7 @@ const stories = [
             <el-input
               v-model="analysisInput"
               type="textarea"
-              :rows="3"
+              :rows="10"
               placeholder="输入方剂信息，如：麻黄汤：麻黄9g，桂枝6g..."
               class="analysis-input"
             />
@@ -1307,8 +1307,8 @@ const stories = [
 }
 
 .result-content {
-  min-height: 120px;
-  max-height: 240px;
+  min-height: 200px;
+  max-height: 400px;
   overflow-y: auto;
   padding: 12px;
   background: lighten($bg-base, 1%);
@@ -1323,7 +1323,7 @@ const stories = [
 }
 
 .placeholder-box {
-  min-height: 120px;
+  min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1336,7 +1336,7 @@ const stories = [
 }
 
 .loading-box {
-  min-height: 120px;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1361,7 +1361,7 @@ const stories = [
 }
 
 .history-panel .scrollable {
-  max-height: 280px;
+  max-height: 400px;
   overflow-y: auto;
   &::-webkit-scrollbar { width: 4px; }
   &::-webkit-scrollbar-thumb { background: rgba($color-primary, 0.3); border-radius: 2px; }
@@ -1383,7 +1383,7 @@ const stories = [
 .history-item {
   background: lighten($bg-base, 1%);
   border-radius: $radius-md;
-  padding: 12px;
+  padding: 16px;
   border: 1px solid $border-color;
   transition: box-shadow 0.2s;
   &:hover { box-shadow: $shadow-sm; }
@@ -1391,27 +1391,27 @@ const stories = [
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     .hist-time { font-size: 11px; color: $text-placeholder; }
   }
   .hist-q {
-    font-size: 12px;
+    font-size: 13px;
     color: $text-secondary;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     .lbl { font-weight: 600; color: $color-primary; }
   }
   .hist-a {
-    font-size: 12px;
+    font-size: 13px;
     color: $text-primary;
-    line-height: 1.5;
+    line-height: 1.6;
     background: $bg-surface;
-    padding: 8px;
+    padding: 12px;
     border-radius: $radius-sm;
     border-left: 3px solid $color-primary;
-    max-height: 100px;
+    max-height: 160px;
     overflow-y: auto;
     :deep(strong) { color: $color-primary; font-weight: 600; }
   }
