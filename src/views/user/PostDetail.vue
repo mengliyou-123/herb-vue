@@ -153,6 +153,11 @@ commentList();
 const inputComment = ref("");
 const comment = ref({});
 const publish = async () => {
+  const content = inputComment.value?.trim();
+  if (!content) {
+    ElMessage.warning("评论内容不能为空，请输入有效内容后再发表");
+    return;
+  }
   comment.value.content = inputComment.value;
   comment.value.postId = id;
   comment.value.replyCommentId = 0;
@@ -189,6 +194,11 @@ const showReplyDrawer = async(replyId, commentRank) => {
   // console.log(replyComment.value);
 }
 const reply = async() => {
+  const content = replyComment.value.content?.trim();
+  if (!content) {
+    ElMessage.warning("回复内容不能为空，请输入有效内容后再发表");
+    return;
+  }
   replyComment.value.postId = id;
   await commentAddService(replyComment.value);
   ElMessage.success("回复成功");

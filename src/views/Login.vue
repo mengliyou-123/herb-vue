@@ -1,5 +1,5 @@
 <script setup>
-import { Lock, User, Message } from "@element-plus/icons-vue";
+import { Lock, User } from "@element-plus/icons-vue";
 import { ref, onMounted, onUnmounted } from "vue";
 import { userLoginService, userRegisterService } from "@/api/user";
 import { ElMessage } from "element-plus";
@@ -14,20 +14,10 @@ import { reactive } from "vue";
 const isRegister = ref(false);
 const registerData = ref({
   username: "",
-  email: "",
   password: "",
   rePassword: "",
   role: "",
 });
-
-const checkEmail = (rule, value, callback) => {
-  const regEmail = /^([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+(\.[a-zA-Z0-9_-])+$/;
-  if (!regEmail.test(value)) {
-    callback(new Error("请输入合法的邮箱"));
-  } else {
-    callback();
-  }
-};
 
 const checkRePassword = (rule, value, callback) => {
   if (value === "") {
@@ -43,9 +33,6 @@ const rules = {
   username: [
     { required: true, message: "请输入用户名", trigger: "blur" },
     { min: 5, max: 16, message: "长度为5-16位", trigger: "blur" },
-  ],
-  email: [{ required: true, message: "请输入邮箱", trigger: "blur" },
-    { validator: checkEmail, trigger: "blur" },
   ],
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
@@ -98,7 +85,6 @@ const login = async () => {
 const clearRegisterData = () => {
   registerData.value = {
     username: "",
-    email: "",
     password: "",
     rePassword: "",
   };
@@ -327,15 +313,6 @@ const featureDetails = {
               :prefix-icon="User"
               placeholder="请输入用户名"
               v-model="registerData.username"
-              class="custom-input"
-            ></el-input>
-          </el-form-item>
-
-          <el-form-item prop="email">
-            <el-input
-              :prefix-icon="Message"
-              placeholder="请输入邮箱"
-              v-model="registerData.email"
               class="custom-input"
             ></el-input>
           </el-form-item>
