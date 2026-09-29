@@ -5,6 +5,9 @@ export const userRegisterService = (registerData) => {
   return request.post('/user/register', registerData)
 }
 
+export const userSendRegisterCodeService = (email) =>
+  request.post('/user/sendRegisterCode', { email })
+
 export const userLoginService = (loginData) => {
   return request.post('/user/login', loginData)
 }

@@ -131,8 +131,8 @@ const activeTab = ref('info');
               <el-input v-model="userInfo.nickname" placeholder="请输入昵称（2-10个字符）" />
             </el-form-item>
             <el-form-item label="用户邮箱" prop="email">
-              <el-input v-model="userInfo.email" placeholder="请输入邮箱地址" />
-              <div class="field-hint">此邮箱用于登录</div>
+              <el-input v-model="userInfo.email" disabled />
+              <div class="field-hint">此邮箱用于登录，不能直接修改</div>
             </el-form-item>
             <el-form-item class="btn-row">
               <el-button type="primary" @click="updateUserInfo">保存修改</el-button>

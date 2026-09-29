@@ -1,7 +1,7 @@
 <script setup>
 import { Lock, User } from "@element-plus/icons-vue";
 import { ref, onMounted, onUnmounted } from "vue";
-import { userLoginService, userRegisterService } from "@/api/user";
+import { userLoginService, userRegisterService, userSendRegisterCodeService } from "@/api/user";
 import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
 import { useTokenStore } from "@/stores/token";
@@ -16,6 +16,7 @@ const registerData = ref({
   password: "",
   rePassword: "",
   email: "",
+  code: "",
   role: "",
 });
 
@@ -38,6 +39,10 @@ const rules = {
     { required: true, message: "请输入邮箱", trigger: "blur" },
     { type: "email", message: "邮箱格式不正确", trigger: "blur" },
   ],
+  code: [
+    { required: true, message: "请输入邮箱验证码", trigger: "blur" },
+    { pattern: /^\d{6}$/, message: "验证码须为6位数字", trigger: "blur" },
+  ],
   rePassword: [
     { required: true, message: "请输入密码", trigger: "blur" },
     { validator: checkRePassword, trigger: "blur" },
@@ -53,11 +58,12 @@ const register = async () => {
   const valid = await form.value.validate();
   if (valid) {
     registerData.value.email = registerData.value.email.trim().toLowerCase();
-    const result = await userRegisterService({ email: registerData.value.email, password: registerData.value.password });
+    const result = await userRegisterService({ email: registerData.value.email, code: registerData.value.code, password: registerData.value.password });
     
     if (result.code === 0) {
       ElMessage.success("注册成功，请使用邮箱登录");
       isRegister.value = false;
+      registerData.value.code = "";
     } else {
       ElMessage.error(result.message || "注册失败");
     }
@@ -67,6 +73,34 @@ const register = async () => {
 const router = useRouter();
 const tokenStore = useTokenStore();
 const form = ref(null);
+const codeSeconds = ref(0);
+const sendingCode = ref(false);
+let codeTimer;
+
+const sendRegisterCode = async () => {
+  if (codeSeconds.value || sendingCode.value) return;
+  try {
+    await form.value.validateField("email");
+  } catch {
+    return;
+  }
+  sendingCode.value = true;
+  try {
+    registerData.value.email = registerData.value.email.trim().toLowerCase();
+    await userSendRegisterCodeService(registerData.value.email);
+    ElMessage.success("验证码已发送，请查看邮箱");
+    codeSeconds.value = 60;
+    clearInterval(codeTimer);
+    codeTimer = setInterval(() => {
+      codeSeconds.value -= 1;
+      if (codeSeconds.value <= 0) clearInterval(codeTimer);
+    }, 1000);
+  } catch {
+    // The request interceptor displays the server's error message.
+  } finally {
+    sendingCode.value = false;
+  }
+};
 
 const userInfoStore = useUserInfoStore();
 
@@ -95,6 +129,7 @@ const clearRegisterData = () => {
     password: "",
     rePassword: "",
     email: "",
+    code: "",
   };
 };
 
@@ -146,6 +181,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside);
+  clearInterval(codeTimer);
 });
 
 const featureDetails = {
@@ -316,6 +352,29 @@ const featureDetails = {
             <p class="form-desc">加入百草居，开启中医养生之旅</p>
           </div>
 
+          <el-form-item prop="email">
+            <el-input
+              v-model="registerData.email"
+              placeholder="请输入邮箱"
+              class="custom-input"
+            ></el-input>
+          </el-form-item>
+
+          <el-form-item prop="code">
+            <div style="display: flex; gap: 10px; width: 100%">
+              <el-input
+                v-model="registerData.code"
+                placeholder="请输入6位邮箱验证码"
+                maxlength="6"
+                inputmode="numeric"
+                class="custom-input"
+              ></el-input>
+              <el-button type="primary" :disabled="codeSeconds > 0 || sendingCode" :loading="sendingCode" @click="sendRegisterCode">
+                {{ codeSeconds > 0 ? `${codeSeconds}秒后重发` : '获取验证码' }}
+              </el-button>
+            </div>
+          </el-form-item>
+
           <el-form-item prop="password">
             <el-input
               :prefix-icon="Lock"
@@ -335,14 +394,6 @@ const featureDetails = {
               v-model="registerData.rePassword"
               class="custom-input"
               show-password
-            ></el-input>
-          </el-form-item>
-
-          <el-form-item prop="email">
-            <el-input
-              v-model="registerData.email"
-              placeholder="请输入邮箱"
-              class="custom-input"
             ></el-input>
           </el-form-item>
 
