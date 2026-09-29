@@ -104,7 +104,7 @@ const pwdRules = {
   ],
   new_pwd: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 8, max: 72, message: '长度为8-72位', trigger: 'blur' },
+    { pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{8,72}$/, message: '8-72位，须包含大小写字母和数字，不能有空格', trigger: 'blur' },
   ],
   re_pwd: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
@@ -127,15 +127,12 @@ const activeTab = ref('info');
       <el-tabs v-model="activeTab" type="border-card" class="profile-tabs">
         <el-tab-pane label="基本资料" name="info">
           <el-form ref="formRef" :model="userInfo" :rules="rules" label-width="90px" class="profile-form">
-            <el-form-item label="登录名称">
-              <el-input v-model="userInfo.username" disabled />
-              <div class="field-hint">登录名不可修改</div>
-            </el-form-item>
             <el-form-item label="用户昵称" prop="nickname">
               <el-input v-model="userInfo.nickname" placeholder="请输入昵称（2-10个字符）" />
             </el-form-item>
             <el-form-item label="用户邮箱" prop="email">
               <el-input v-model="userInfo.email" placeholder="请输入邮箱地址" />
+              <div class="field-hint">此邮箱用于登录</div>
             </el-form-item>
             <el-form-item class="btn-row">
               <el-button type="primary" @click="updateUserInfo">保存修改</el-button>
@@ -180,7 +177,7 @@ const activeTab = ref('info');
               <el-input v-model="pwdData.old_pwd" type="password" placeholder="请输入旧密码" show-password />
             </el-form-item>
             <el-form-item label="新密码" prop="new_pwd">
-              <el-input v-model="pwdData.new_pwd" type="password" placeholder="请输入新密码（8-72位）" show-password />
+              <el-input v-model="pwdData.new_pwd" type="password" placeholder="8-72位，包含大小写字母和数字" show-password />
             </el-form-item>
             <el-form-item label="确认新密码" prop="re_pwd">
               <el-input v-model="pwdData.re_pwd" type="password" placeholder="请再次输入新密码" show-password />

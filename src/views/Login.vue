@@ -13,7 +13,6 @@ import { reactive } from "vue";
 
 const isRegister = ref(false);
 const registerData = ref({
-  username: "",
   password: "",
   rePassword: "",
   email: "",
@@ -31,13 +30,9 @@ const checkRePassword = (rule, value, callback) => {
 };
 
 const rules = {
-  username: [
-    { required: true, message: "请输入用户名", trigger: "blur" },
-    { min: 4, max: 16, message: "长度为4-16位", trigger: "blur" },
-  ],
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
-    { min: 8, max: 72, message: "长度为8-72位", trigger: "blur" },
+    { pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S{8,72}$/, message: "8-72位，须包含大小写字母和数字，不能有空格", trigger: "blur" },
   ],
   email: [
     { required: true, message: "请输入邮箱", trigger: "blur" },
@@ -50,20 +45,21 @@ const rules = {
 };
 
 const loginRules = {
-  username: rules.username,
+  email: rules.email,
   password: [{ required: true, message: "请输入密码", trigger: "blur" }],
 };
 
 const register = async () => {
   const valid = await form.value.validate();
   if (valid) {
-    const result = await userRegisterService(registerData.value);
+    registerData.value.email = registerData.value.email.trim().toLowerCase();
+    const result = await userRegisterService({ email: registerData.value.email, password: registerData.value.password });
     
     if (result.code === 0) {
-      ElMessage.success("注册成功");
+      ElMessage.success("注册成功，请使用邮箱登录");
       isRegister.value = false;
     } else {
-      alert("注册失败");
+      ElMessage.error(result.message || "注册失败");
     }
   }
 };
@@ -77,7 +73,8 @@ const userInfoStore = useUserInfoStore();
 const login = async () => {
   const valid = await form.value.validate();
   if (valid) {
-    let result = await userLoginService(registerData.value);
+    registerData.value.email = registerData.value.email.trim().toLowerCase();
+    let result = await userLoginService({ email: registerData.value.email, password: registerData.value.password });
     ElMessage.success(result.message ? result.message : "登录成功");
     tokenStore.setToken(result.data);
     let result2 = await userInfoService();
@@ -95,7 +92,6 @@ const login = async () => {
 
 const clearRegisterData = () => {
   registerData.value = {
-    username: "",
     password: "",
     rePassword: "",
     email: "",
@@ -320,20 +316,11 @@ const featureDetails = {
             <p class="form-desc">加入百草居，开启中医养生之旅</p>
           </div>
 
-          <el-form-item prop="username">
-            <el-input
-              :prefix-icon="User"
-              placeholder="请输入用户名"
-              v-model="registerData.username"
-              class="custom-input"
-            ></el-input>
-          </el-form-item>
-
           <el-form-item prop="password">
             <el-input
               :prefix-icon="Lock"
               type="password"
-              placeholder="请输入密码"
+              placeholder="8-72位，包含大小写字母和数字"
               v-model="registerData.password"
               class="custom-input"
               show-password
@@ -388,11 +375,11 @@ const featureDetails = {
             <p class="form-desc">登录您的百草居账户</p>
           </div>
 
-          <el-form-item prop="username">
+          <el-form-item prop="email">
             <el-input
               :prefix-icon="User"
-              placeholder="请输入用户名"
-              v-model="registerData.username"
+              placeholder="请输入注册邮箱"
+              v-model="registerData.email"
               class="custom-input"
             ></el-input>
           </el-form-item>
