@@ -89,7 +89,7 @@ const showComments = async(id) => {
       <el-table-column label="标题" prop="title"></el-table-column>
       <el-table-column label="内容" :show-overflow-tooltip="true">
         <template #default="{ row }">
-          <div v-html="row.content" class="content-preview"></div>
+          <div v-safe-html="row.content" class="content-preview"></div>
         </template>
       </el-table-column>
       <el-table-column label="发贴人用户名" prop="username"></el-table-column>

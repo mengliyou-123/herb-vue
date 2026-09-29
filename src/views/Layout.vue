@@ -250,7 +250,7 @@ import {
   Connection
 } from '@element-plus/icons-vue'
 import avatar from '@/assets/default.png'
-import { userInfoService } from "@/api/user";
+import { userInfoService, userLogoutService } from "@/api/user";
 import { useUserInfoStore } from "@/stores/userInfo";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -329,9 +329,17 @@ const handleCommand = (command) => {
       }
     ).then(
       async () => {
+        let serverRevoked = false;
+        try {
+          await userLogoutService();
+          serverRevoked = true;
+        } catch (error) {
+          // Local state must still be cleared if the network is unavailable.
+        }
         userInfoStore.removeUserInfo();
         tokenStore.removeToken();
-        ElMessage.success("已退出登录");
+        if (serverRevoked) ElMessage.success("已退出登录");
+        else ElMessage.warning("已清除本地登录，服务端注销暂时失败");
         await router.push('/login');
       }
     )

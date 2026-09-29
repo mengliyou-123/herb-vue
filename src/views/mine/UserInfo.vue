@@ -6,9 +6,11 @@ import { useTokenStore } from "@/stores/token";
 import { userInfoUpdateService, userAvatarUpdateService, userPwdUpdateService } from "@/api/user";
 import { ElMessage } from "element-plus";
 import avatar from '@/assets/default.png';
+import { useRouter } from 'vue-router';
 
 const userInfoStore = useUserInfoStore();
 const tokenStore = useTokenStore();
+const router = useRouter();
 
 const userInfo = ref({
   ...userInfoStore.userInfo
@@ -72,7 +74,10 @@ const updatePwdData = async () => {
   await pwdFormRef.value.validate(async (valid) => {
     if (valid) {
       await userPwdUpdateService(pwdData.value);
-      ElMessage.success('修改成功')
+      tokenStore.removeToken();
+      userInfoStore.removeUserInfo();
+      ElMessage.success('密码已修改，请重新登录')
+      await router.push('/login');
       pwdData.value = {
         old_pwd: '',
         new_pwd: '',
@@ -95,11 +100,11 @@ const checkRePassword = (rule, value, callback) => {
 const pwdRules = {
   old_pwd: [
     { required: true, message: '请输入旧密码', trigger: 'blur' },
-    { min: 5, max: 16, message: '长度为5-16位', trigger: 'blur' },
+    { min: 5, max: 72, message: '长度为5-72位', trigger: 'blur' },
   ],
   new_pwd: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 5, max: 16, message: '长度为5-16位', trigger: 'blur' },
+    { min: 8, max: 72, message: '长度为8-72位', trigger: 'blur' },
   ],
   re_pwd: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
@@ -148,6 +153,7 @@ const activeTab = ref('info');
                   :show-file-list="false"
                   :auto-upload="true"
                   action="/api/upload"
+                  accept="image/jpeg,image/png"
                   name="file"
                   :headers="{ 'Authorization': tokenStore.token }"
                   :on-success="uploadSuccess"
@@ -174,7 +180,7 @@ const activeTab = ref('info');
               <el-input v-model="pwdData.old_pwd" type="password" placeholder="请输入旧密码" show-password />
             </el-form-item>
             <el-form-item label="新密码" prop="new_pwd">
-              <el-input v-model="pwdData.new_pwd" type="password" placeholder="请输入新密码（5-16位）" show-password />
+              <el-input v-model="pwdData.new_pwd" type="password" placeholder="请输入新密码（8-72位）" show-password />
             </el-form-item>
             <el-form-item label="确认新密码" prop="re_pwd">
               <el-input v-model="pwdData.re_pwd" type="password" placeholder="请再次输入新密码" show-password />

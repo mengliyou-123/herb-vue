@@ -386,7 +386,7 @@ const extractQuestion = (question) => {
                 <div
                   v-else-if="aiAnswer"
                   class="ai-answer-textarea"
-                  v-html="formatText(aiAnswer)"
+                  v-safe-html="formatText(aiAnswer)"
                 ></div>
                 <div v-else class="ai-placeholder">
                   请输入问题，AI将为您解答关于{{ herb.cnName }}的知识
@@ -432,7 +432,7 @@ const extractQuestion = (question) => {
                   </div>
                   <div class="card-answer">
                     <span class="label">回答：</span>
-                    <div class="content" v-html="formatAnswer(item.answer)"></div>
+                    <div class="content" v-safe-html="formatAnswer(item.answer)"></div>
                   </div>
                 </div>
               </div>

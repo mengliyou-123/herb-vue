@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from "vue-router";
+import { useTokenStore } from "@/stores/token";
 
 const routes = [
   { 
@@ -174,7 +175,12 @@ router.beforeEach((to, from, next) => {
   if (to.meta.title) {
     document.title = `${to.meta.title} - 百草居`
   }
-  next()
+  const token = useTokenStore().token
+  if (to.path !== '/login' && !token) {
+    next('/login')
+  } else {
+    next()
+  }
 })
 
 export default router

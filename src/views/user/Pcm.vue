@@ -424,7 +424,7 @@ const toggleTypeExpand = () => {
                 <div class="spinner"></div>
                 <span>正在连接AI服务...</span>
               </div>
-              <div v-else-if="answer" class="result-content" v-html="formatText(answer)"></div>
+              <div v-else-if="answer" class="result-content" v-safe-html="formatText(answer)"></div>
               <div v-else class="placeholder-box">
                 <span class="placeholder-icon">💡</span>
                 输入病症后，AI将为您推荐合适的中成药

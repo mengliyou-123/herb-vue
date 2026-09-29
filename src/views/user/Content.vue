@@ -59,7 +59,7 @@ const backToChapter = async (bookId) => {
       </div>
     </template>
  
-      <div style="width:90%;line-height:30px;margin-left:60px;" v-html="content.bookContent">
+      <div style="width:90%;line-height:30px;margin-left:60px;" v-safe-html="content.bookContent">
         </div>
   
         

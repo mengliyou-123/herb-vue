@@ -81,7 +81,6 @@ isCollect();
 
 //收藏帖子
 const addCollection = async () => {
-    await postCollNumAddService(id);
     await postCollAddService(id);
     ElMessage.success("收藏成功");
     await postDetail();
@@ -96,7 +95,6 @@ const deleteCollection = async () => {
     let collId = result.data.id;
     console.log(result.data.id);
     await postCollDeleteService(collId);
-    await postCollNumSubtractService(id);
     ElMessage.success("取消收藏成功");
     state.value = true;
     await postDetail();
@@ -272,7 +270,7 @@ const reply = async() => {
       </div>
     </template>
 
-    <div class="post-content" v-html="post.content"></div>
+    <div class="post-content" v-safe-html="post.content"></div>
 
     <div class="post-image" v-if="post.coverImg">
       <img :src="post.coverImg" alt="帖子封面" />

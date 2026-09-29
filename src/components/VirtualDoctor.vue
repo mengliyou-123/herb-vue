@@ -1202,7 +1202,7 @@ watch(() => props.show, (v) => { if (v && !isCalling.value) startCall() })
                   <span class="vd-msg-name">{{ m.type === 'doctor' ? '中医顾问' : '我' }}</span>
                   <span class="vd-msg-time">{{ m.time }}</span>
                 </div>
-                <div class="vd-msg-text" v-html="formatMessage(m.content)"></div>
+                <div class="vd-msg-text" v-safe-html="formatMessage(m.content)"></div>
               </div>
             </div>
             <div v-if="currentText" class="vd-msg doctor vd-typing">

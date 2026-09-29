@@ -47,7 +47,6 @@ const deletePre = async (id) => {
     await ElMessageBox.confirm('确定要取消收藏该方剂吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' });
     const collIdResult = await isPreCollService({ userId: userInfoStore.userInfo.id, preId: id });
     await preCollDeleteService(collIdResult.data.id);
-    await preCollNumSubtractService(id);
     ElMessage.success("取消收藏成功");
     await preCollList();
   } catch (error) { if (error !== 'cancel') ElMessage.error("操作失败"); }
@@ -76,7 +75,6 @@ const deleteBook = async (bookId) => {
     await ElMessageBox.confirm('确定要取消收藏该典籍吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' });
     const collIdResult = await isBookCollService({ bookId, userId: userInfoStore.userInfo.id });
     await bookCollDeleteService(collIdResult.data.id);
-    await bookCollNumSubtractService(bookId);
     ElMessage.success("取消收藏成功");
     await bookCollList();
   } catch (error) { if (error !== 'cancel') ElMessage.error("操作失败"); }
@@ -108,7 +106,6 @@ const deletePost = async (postId) => {
     await ElMessageBox.confirm('确定要取消收藏该讨论帖吗？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' });
     const collIdResult = await isPostCollService({ postId, userId: userInfoStore.userInfo.id });
     await postCollDeleteService(collIdResult.data.id);
-    await postCollNumSubtractService(postId);
     ElMessage.success("取消收藏成功");
     await postCollList();
   } catch (error) { if (error !== 'cancel') ElMessage.error("操作失败"); }
@@ -236,7 +233,7 @@ const deletePost = async (postId) => {
                   <span class="meta-item">📅 {{ p.postTime?.substring(0, 10) }} {{ p.postTime?.substring(11, 19) }}</span>
                   <span class="meta-item">👁️ {{ p.viewNum }} 人浏览</span>
                 </div>
-                <p class="post-excerpt" v-html="p.content"></p>
+                <p class="post-excerpt" v-safe-html="p.content"></p>
               </div>
             </div>
           </div>

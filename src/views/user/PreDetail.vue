@@ -82,7 +82,6 @@ const isCollect = async () => {
 isCollect();
 
 const addCollection = async () => {
-    await preCollNumAddService(Number(id));
     await preCollAddService(Number(id));
     ElMessage.success("收藏成功");
     await detail();
@@ -96,7 +95,6 @@ const deleteCollection = async () => {
     let collId = result.data.id;
     console.log(result.data.id);
     await preCollDeleteService(collId);
-    await preCollNumSubtractService(Number(id));
     ElMessage.success("取消收藏成功");
     await detail();
     await isCollect();

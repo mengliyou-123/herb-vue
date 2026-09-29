@@ -304,7 +304,7 @@ const viewHistory = (item) => {
                 </div>
               </div>
             </div>
-            <div v-else class="result-content" v-html="formatText(diagnosisResult)"></div>
+            <div v-else class="result-content" v-safe-html="formatText(diagnosisResult)"></div>
           </div>
         </div>
 

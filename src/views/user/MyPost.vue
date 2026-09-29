@@ -193,7 +193,7 @@ const addPost = async () => {
                 <span style="color:grey">{{p.postTime.substring(0,10)}} {{p.postTime.substring(11,20)}}</span>
                 <span style="margin-left: 10px;color:grey">{{p.viewNum}}人浏览过</span>
                 </div>
-                <div class="content" v-html="p.content" @click="detail(p.id)">
+                <div class="content" v-safe-html="p.content" @click="detail(p.id)">
                 </div>
             </div>
         </div>

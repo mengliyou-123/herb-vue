@@ -9,6 +9,8 @@ export const userLoginService = (loginData) => {
   return request.post('/user/login', loginData)
 }
 
+export const userLogoutService = () => request.post('/user/logout')
+
 export const userInfoService = () => {
   return request.get('/user/userInfo')
 }
