@@ -6,17 +6,17 @@ import App from './App.vue'
 import ElementPlus from 'element-plus'
 import router from "@/router"; //因为文件名是index.js，不需要写
 import {createPinia} from "pinia";
-import {createPersistedState} from "pinia-persistedstate-plugin";
 import locale from 'element-plus/dist/locale/zh-cn'
 import { sanitizeRichHtml } from '@/utils/safeHtml'
 
 const app = createApp(App)
 const pinia = createPinia()
-// Clear tokens written by earlier versions before switching to tab-scoped storage.
+// Remove browser-stored credentials from previous versions. Authentication now
+// stays in memory and a page refresh requires signing in again.
 window.localStorage.removeItem('pinia-token')
 window.localStorage.removeItem('pinia-userInfo')
-const persistedState = createPersistedState({ storage: window.sessionStorage });
-pinia.use(persistedState)
+window.sessionStorage.removeItem('pinia-token')
+window.sessionStorage.removeItem('pinia-userInfo')
 
 app.use(pinia)
 app.use(router)
