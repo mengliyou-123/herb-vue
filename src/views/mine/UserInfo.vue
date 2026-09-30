@@ -127,12 +127,15 @@ const activeTab = ref('info');
       <el-tabs v-model="activeTab" type="border-card" class="profile-tabs">
         <el-tab-pane label="基本资料" name="info">
           <el-form ref="formRef" :model="userInfo" :rules="rules" label-width="90px" class="profile-form">
+            <el-form-item label="登录名称">
+              <el-input v-model="userInfo.username" disabled />
+              <div class="field-hint">登录名不可修改</div>
+            </el-form-item>
             <el-form-item label="用户昵称" prop="nickname">
               <el-input v-model="userInfo.nickname" placeholder="请输入昵称（2-10个字符）" />
             </el-form-item>
             <el-form-item label="用户邮箱" prop="email">
-              <el-input v-model="userInfo.email" disabled />
-              <div class="field-hint">此邮箱用于登录，不能直接修改</div>
+              <el-input v-model="userInfo.email" placeholder="请输入邮箱地址" />
             </el-form-item>
             <el-form-item class="btn-row">
               <el-button type="primary" @click="updateUserInfo">保存修改</el-button>
