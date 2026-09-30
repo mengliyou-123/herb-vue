@@ -66,6 +66,13 @@ instance.interceptors.response.use(
             duration: 3000
           });
           break;
+        case 429:
+          ElMessage({
+            message: '请求过于频繁，请稍后再试',
+            type: 'warning',
+            duration: 3000
+          });
+          break;
         case 500:
           ElMessage({
             message: '服务器内部错误，请稍后重试',
