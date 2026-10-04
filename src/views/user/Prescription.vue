@@ -402,7 +402,7 @@ const stories = [
                 <div class="spinner"></div>
                 <span>正在连接AI服务...</span>
               </div>
-              <div v-else-if="analysisResult" class="result-content" v-html="formatText(analysisResult)"></div>
+              <div v-else-if="analysisResult" class="result-content" v-safe-html="formatText(analysisResult)"></div>
               <div v-else class="placeholder-box">输入方剂信息后，AI将为您分析组成、配伍、功效等</div>
             </div>
           </div>
@@ -423,7 +423,7 @@ const stories = [
                   <el-button size="small" link type="danger" @click="deleteHistoryItem(item.id)">删除</el-button>
                 </div>
                 <div class="hist-q"><span class="lbl">方剂：</span>{{ item.question }}</div>
-                <div class="hist-a" v-html="formatAnswer(item.answer)"></div>
+                <div class="hist-a" v-safe-html="formatAnswer(item.answer)"></div>
               </div>
             </div>
           </div>

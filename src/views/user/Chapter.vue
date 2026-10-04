@@ -58,7 +58,6 @@ const isCollect = async () => {
 isCollect();
 
 const addCollection = async () => {
-    await bookCollNumAddService(Number(bookId));
     await bookCollAddService(Number(bookId));
     ElMessage.success("收藏成功");
     await titleList(bookId);
@@ -72,7 +71,6 @@ const deleteCollection = async () => {
     let collId = result.data.id;
     console.log(result.data.id);
     await bookCollDeleteService(collId);
-    await bookCollNumSubtractService(Number(bookId));
     ElMessage.success("取消收藏成功");
     await titleList(bookId);
     await isCollect();

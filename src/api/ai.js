@@ -283,6 +283,9 @@ export const herbRecognitionStreamService = async (imageUrl, onMessage, onComple
                         onComplete && onComplete();
                         return;
                     }
+                    if (data === '[ERROR]') {
+                        throw new Error('中草药识别服务暂时不可用');
+                    }
                     if (data) {
                         onMessage && onMessage(data);
                     }

@@ -22,7 +22,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8081',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/,'')
       },
@@ -36,20 +36,15 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'element-plus': ['element-plus', '@element-plus/icons-vue'],
-          'vue-vendor': ['vue', 'vue-router', 'pinia'],
-          'editor': ['@vueup/vue-quill'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('/element-plus/') || id.includes('/@element-plus/')) return 'element-plus'
+          if (id.includes('/@vueup/vue-quill/') || id.includes('/quill/')) return 'editor'
+          if (id.includes('/vue/') || id.includes('/vue-router/') || id.includes('/pinia/')) return 'vue-vendor'
         }
       }
     },
-    chunkSizeWarningLimit: 1000,
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    }
+    chunkSizeWarningLimit: 1000
   },
   optimizeDeps: {
     include: ['vue', 'vue-router', 'pinia', 'element-plus', 'axios']

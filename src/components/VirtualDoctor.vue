@@ -2,7 +2,6 @@
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { diagnosisStreamService } from '@/api/ai.js'
 import { ElMessage } from 'element-plus'
-import { formatAiText, formatPlainText } from '@/utils/formatAiText.js'
 
 const props = defineProps({
   show: { type: Boolean, default: false }
@@ -1086,10 +1085,15 @@ const getFallback = (q) => {
 }
 
 const formatMessage = (t) => {
-  return formatAiText(t)
+  if (!t) return ''
+  let s = String(t)
+  s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+  s = s.replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+  s = s.replace(/^(\d+)\.\s+/gm, '<strong>$1.</strong> ')
+  s = s.replace(/^-\s+/gm, '• ')
+  s = s.replace(/\n+/g, '<br>')
+  return s
 }
-
-const formatUserMessage = (t) => formatPlainText(t)
 
 watch(() => props.show, (v) => { if (v && !isCalling.value) startCall() })
 </script>
@@ -1198,14 +1202,14 @@ watch(() => props.show, (v) => { if (v && !isCalling.value) startCall() })
                   <span class="vd-msg-name">{{ m.type === 'doctor' ? '中医顾问' : '我' }}</span>
                   <span class="vd-msg-time">{{ m.time }}</span>
                 </div>
-                <div class="vd-msg-text" v-html="m.type === 'doctor' ? formatMessage(m.content) : formatUserMessage(m.content)"></div>
+                <div class="vd-msg-text" v-safe-html="formatMessage(m.content)"></div>
               </div>
             </div>
             <div v-if="currentText" class="vd-msg doctor vd-typing">
               <div class="vd-msg-avatar">👨‍⚕️</div>
               <div class="vd-msg-body">
                 <div class="vd-dots"><span></span><span></span><span></span></div>
-                <div class="vd-typing-text">{{ currentText }}<span class="vd-cursor">|</span></div>
+                <div class="vd-typing-text">{{ currentText.substring(0, 80) }}<span class="vd-cursor">|</span></div>
               </div>
             </div>
             
@@ -1371,24 +1375,12 @@ watch(() => props.show, (v) => { if (v && !isCalling.value) startCall() })
 .vd-msg.user .vd-msg-text{background:linear-gradient(135deg,#3b82f6,#2563eb);border-color:transparent;color:#fff}
 .vd-msg-text :deep(strong){color:#6B4423;font-weight:700}
 .vd-msg.user .vd-msg-text :deep(strong){color:#fff}
-.vd-msg.doctor .vd-msg-text :deep(.ai-line){margin:4px 0}
-.vd-msg.doctor .vd-msg-text :deep(.ai-spacer){height:7px}
-.vd-msg.doctor .vd-msg-text :deep(.ai-section-title){margin:12px 0 7px;padding:6px 9px;border-left:3px solid #5F8A4C;border-radius:5px 8px 8px 5px;background:rgba(95,138,76,.1);color:#365B28;font-weight:800}
-.vd-msg.doctor .vd-msg-text :deep(.ai-section-title:first-child){margin-top:0}
-.vd-msg.doctor .vd-msg-text :deep(.ai-label){color:#2F6F5E;font-weight:700}
-.vd-msg.doctor .vd-msg-text :deep(.ai-emphasis){color:#4B6F32;font-weight:750}
-.vd-msg.doctor .vd-msg-text :deep(.ai-list-item),.vd-msg.doctor .vd-msg-text :deep(.ai-numbered){display:flex;align-items:flex-start;gap:8px}
-.vd-msg.doctor .vd-msg-text :deep(.ai-bullet){color:#5F8A4C;font-size:17px;font-weight:900;line-height:1.45}
-.vd-msg.doctor .vd-msg-text :deep(.ai-number){display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;margin-top:2px;border-radius:6px;background:rgba(95,138,76,.14);color:#365B28;font-size:11px;font-weight:800}
-.vd-msg.doctor .vd-msg-text :deep(.ai-advice){padding:5px 8px;border-left:2px solid rgba(95,138,76,.4);background:rgba(255,255,255,.55);border-radius:0 7px 7px 0}
-.vd-msg.doctor .vd-msg-text :deep(.ai-warning){padding:7px 9px;border:1px solid rgba(217,119,6,.2);border-left:3px solid #D97706;border-radius:7px;background:#FFF7ED;color:#9A3412}
-.vd-msg.doctor .vd-msg-text :deep(.ai-warning-title){border-left-color:#D97706;background:#FFF7ED;color:#B45309}
 .vd-dots{display:flex;gap:6px;margin-bottom:10px;padding:8px 0}
 .vd-dots span{width:8px;height:8px;border-radius:50%;background:#6B4423;animation:vd-db 1.4s ease-in-out infinite}
 .vd-dots span:nth-child(2){animation-delay:.2s}
 .vd-dots span:nth-child(3){animation-delay:.4s}
 @keyframes vd-db{0%,80%,100%{transform:scale(.5);opacity:.3}40%{transform:scale(1);opacity:1}}
-.vd-typing-text{font-size:13px;color:#8c8578;line-height:1.6;max-height:180px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+.vd-typing-text{font-size:13px;color:#8c8578;line-height:1.5;max-height:60px;overflow:hidden}
 .vd-cursor{color:#2D5016;font-weight:700;animation:vd-cb 1s step-end infinite}
 @keyframes vd-cb{0%,100%{opacity:1}50%{opacity:0}}
 

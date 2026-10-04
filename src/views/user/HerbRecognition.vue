@@ -32,8 +32,8 @@ const handleFileChange = async (file) => {
   const rawFile = file.raw || file;
   if (!rawFile) return;
   
-  if (!rawFile.type.startsWith('image/')) {
-    ElMessage.warning("请上传图片文件");
+  if (!['image/jpeg', 'image/png'].includes(rawFile.type)) {
+    ElMessage.warning("请上传 JPEG 或 PNG 图片");
     return;
   }
   
@@ -281,7 +281,7 @@ const clearImage = () => {
                 </div>
               </div>
             </div>
-            <div v-else class="result-content" v-html="formatText(recognitionResult)"></div>
+            <div v-else class="result-content" v-safe-html="formatText(recognitionResult)"></div>
           </div>
         </div>
 

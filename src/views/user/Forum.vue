@@ -402,7 +402,7 @@ const deletePost = (event, id) => {
                     </span>
                   </div>
 
-                  <div class="post-excerpt" v-html="truncateContent(p.content)"></div>
+                  <div class="post-excerpt" v-safe-html="truncateContent(p.content)"></div>
 
                   <div class="post-footer">
                     <span class="read-more">

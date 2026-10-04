@@ -86,7 +86,7 @@ const backToPost = async() => {
       <el-table-column label="序号" type="index" width="100px"></el-table-column>
       <el-table-column label="内容" :show-overflow-tooltip="true">
         <template #default="{ row }">
-          <div v-html="row.content" class="content-preview"></div>
+          <div v-safe-html="row.content" class="content-preview"></div>
         </template>
       </el-table-column>
       <el-table-column label="评论人用户名" prop="username" :show-overflow-tooltip="true"></el-table-column>

@@ -17,7 +17,4 @@ export const useUserInfoStore = defineStore('userInfo',
       return {
         userInfo, setUserInfo, removeUserInfo
       }
-    },
-    {
-      persist: true
     });

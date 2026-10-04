@@ -1,6 +1,7 @@
 import axios from "axios";
 import { ElMessage } from "element-plus";
 import { useTokenStore } from "@/stores/token";
+import { useUserInfoStore } from "@/stores/userInfo";
 import router from "@/router";
 
 const instance = axios.create({ baseURL: '/api' });
@@ -42,6 +43,8 @@ instance.interceptors.response.use(
       
       switch (status) {
         case 401:
+          useTokenStore().removeToken();
+          useUserInfoStore().removeUserInfo();
           ElMessage({
             message: '登录已过期，请重新登录',
             type: 'warning',
@@ -60,6 +63,13 @@ instance.interceptors.response.use(
           ElMessage({
             message: '请求的资源不存在',
             type: 'error',
+            duration: 3000
+          });
+          break;
+        case 429:
+          ElMessage({
+            message: '请求过于频繁，请稍后再试',
+            type: 'warning',
             duration: 3000
           });
           break;

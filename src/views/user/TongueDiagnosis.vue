@@ -32,8 +32,8 @@ const handleFileChange = async (file) => {
   const rawFile = file.raw || file;
   if (!rawFile) return;
   
-  if (!rawFile.type.startsWith('image/')) {
-    ElMessage.warning("请上传图片文件");
+  if (!['image/jpeg', 'image/png'].includes(rawFile.type)) {
+    ElMessage.warning("请上传 JPEG 或 PNG 图片");
     return;
   }
   
@@ -50,7 +50,7 @@ const handleFileChange = async (file) => {
   try {
     const formData = new FormData();
     formData.append('file', rawFile);
-    const result = await request.post('/upload', formData, {
+    const result = await request.post('/upload/private', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     uploadedUrl.value = result.data;
@@ -281,7 +281,7 @@ const clearImage = () => {
                 </div>
               </div>
             </div>
-            <div v-else class="result-content" v-html="formatText(diagnosisResult)"></div>
+            <div v-else class="result-content" v-safe-html="formatText(diagnosisResult)"></div>
           </div>
         </div>
 

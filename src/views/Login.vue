@@ -16,6 +16,7 @@ const registerData = ref({
   username: "",
   password: "",
   rePassword: "",
+  email: "",
   role: "",
 });
 
@@ -36,12 +37,21 @@ const rules = {
   ],
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
-    { min: 5, max: 16, message: "长度为5-16位", trigger: "blur" },
+    { min: 8, max: 72, message: "长度为8-72位", trigger: "blur" },
+  ],
+  email: [
+    { required: true, message: "请输入邮箱", trigger: "blur" },
+    { type: "email", message: "邮箱格式不正确", trigger: "blur" },
   ],
   rePassword: [
     { required: true, message: "请输入密码", trigger: "blur" },
     { validator: checkRePassword, trigger: "blur" },
   ],
+};
+
+const loginRules = {
+  username: rules.username,
+  password: [{ required: true, message: "请输入密码", trigger: "blur" }],
 };
 
 const register = async () => {
@@ -50,7 +60,8 @@ const register = async () => {
     const result = await userRegisterService(registerData.value);
     
     if (result.code === 0) {
-      alert(result.msg ? msg : "注册成功");
+      ElMessage.success("注册成功");
+      isRegister.value = false;
     } else {
       alert("注册失败");
     }
@@ -87,6 +98,7 @@ const clearRegisterData = () => {
     username: "",
     password: "",
     rePassword: "",
+    email: "",
   };
 };
 
@@ -339,8 +351,16 @@ const featureDetails = {
             ></el-input>
           </el-form-item>
 
+          <el-form-item prop="email">
+            <el-input
+              v-model="registerData.email"
+              placeholder="请输入邮箱"
+              class="custom-input"
+            ></el-input>
+          </el-form-item>
+
           <el-form-item>
-            <button type="button" class="submit-btn" @click="register(); isRegister = false;">
+            <button type="button" class="submit-btn" @click="register()">
               注册
             </button>
           </el-form-item>
@@ -360,7 +380,7 @@ const featureDetails = {
           autocomplete="off"
           v-else
           :model="registerData"
-          :rules="rules"
+          :rules="loginRules"
           class="auth-form"
         >
           <div class="form-header">
