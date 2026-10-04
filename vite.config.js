@@ -25,6 +25,11 @@ export default defineConfig({
         target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8081',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/,'')
+      },
+      '/agent-api': {
+        target: 'http://localhost:7862',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/agent-api/, '/api')
       }
     }
   },

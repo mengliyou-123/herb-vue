@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { diagnosisStreamService, getDiagnosisHistoryService, deleteHistoryService } from "@/api/ai.js";
 import { ElMessage, ElMessageBox } from "element-plus";
 import VirtualDoctor from "@/components/VirtualDoctor.vue";
+import { formatAiText } from "@/utils/formatAiText.js";
 
 const symptoms = ref("");
 const diagnosisResult = ref("");
@@ -29,14 +30,7 @@ const loadHistory = async () => {
 };
 
 const formatText = (text) => {
-  if (!text) return '';
-  let s = String(text);
-  s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  s = s.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
-  s = s.replace(/^(\d+)\.\s+/gm, '<strong>$1.</strong> ');
-  s = s.replace(/^-\s+/gm, '• ');
-  s = s.replace(/\n+/g, '<br>');
-  return s;
+  return formatAiText(text);
 };
 
 const startDiagnosis = async () => {
@@ -1260,7 +1254,74 @@ $shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
       padding: 0 3px;
     }
 
-    :deep(br) { margin-bottom: 8px; }
+    :deep(.ai-line) { margin: 5px 0; }
+    :deep(.ai-spacer) { height: 9px; }
+
+    :deep(.ai-section-title) {
+      margin: 16px 0 8px;
+      padding: 8px 12px;
+      border-left: 3px solid $primary;
+      border-radius: 6px 10px 10px 6px;
+      background: rgba(16, 185, 129, 0.09);
+      color: $primary-dark;
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
+    :deep(.ai-section-title:first-child) { margin-top: 0; }
+    :deep(.ai-label) { color: #0F766E; font-weight: 750; }
+    :deep(.ai-emphasis) { color: #047857; font-weight: 750; }
+
+    :deep(.ai-list-item),
+    :deep(.ai-numbered) {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+    }
+
+    :deep(.ai-bullet) {
+      color: $primary;
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+
+    :deep(.ai-number) {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 23px;
+      height: 23px;
+      margin-top: 2px;
+      border-radius: 7px;
+      background: rgba(16, 185, 129, 0.14);
+      color: #047857;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    :deep(.ai-advice) {
+      padding: 6px 10px;
+      border-left: 2px solid rgba(16, 185, 129, 0.45);
+      background: rgba(255, 255, 255, 0.48);
+      border-radius: 0 8px 8px 0;
+    }
+
+    :deep(.ai-warning) {
+      padding: 8px 11px;
+      border: 1px solid rgba(245, 158, 11, 0.22);
+      border-left: 3px solid #F59E0B;
+      border-radius: 8px;
+      background: rgba(255, 247, 237, 0.82);
+      color: #9A3412;
+    }
+
+    :deep(.ai-warning-title) {
+      border-left-color: #F59E0B;
+      background: rgba(255, 247, 237, 0.9);
+      color: #B45309;
+    }
   }
 }
 

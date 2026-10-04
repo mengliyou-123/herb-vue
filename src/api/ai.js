@@ -32,6 +32,10 @@ export const deleteHistoryService = (id) => {
     return request.delete(`/ai/history/${id}`);
 };
 
+export const saveDiagnosisHistoryService = (question, answer) => {
+    return request.post('/ai/history', { question, answer });
+};
+
 export const herbQAStreamService = async (herbName, question, onMessage, onComplete, onError) => {
     const tokenStore = useTokenStore();
     const token = tokenStore.token;
@@ -139,8 +143,41 @@ export const prescriptionAnalysisStreamService = async (prescriptionData, onMess
 export const diagnosisStreamService = async (symptoms, onMessage, onComplete, onError) => {
     const tokenStore = useTokenStore();
     const token = tokenStore.token;
-    
-    const url = '/api/ai/diagnosis-stream';
+
+    // Agent 通过 Vite/Nginx 的 /agent-api 代理暴露，Spring Boot 不再转发问答流。
+    const agentBaseUrl = (import.meta.env.VITE_AGENT_BASE_URL || '/agent-api').replace(/\/$/, '');
+    const url = `${agentBaseUrl}/query/stream`;
+    let fullText = '';
+    let completed = false;
+    const streamBatchSize = 1;
+    const streamIntervalMs = 18;
+
+    const emitIncrementally = async (text) => {
+        if (!text || !onMessage) return;
+
+        for (let start = 0; start < text.length; start += streamBatchSize) {
+            const end = Math.min(start + streamBatchSize, text.length);
+            onMessage(text.slice(start, end));
+            if (end < text.length) {
+                await new Promise(resolve => setTimeout(resolve, streamIntervalMs));
+            }
+        }
+    };
+
+    const complete = async () => {
+        if (completed) return;
+        completed = true;
+
+        // Agent 不知道当前登录用户；回答完成后仍通过 Spring Boot 保存历史。
+        if (fullText.trim()) {
+            try {
+                await saveDiagnosisHistoryService(symptoms, fullText);
+            } catch (historyError) {
+                console.error('保存问诊历史失败', historyError);
+            }
+        }
+        if (onComplete) await onComplete();
+    };
     
     try {
         const response = await fetch(url, {
@@ -150,7 +187,7 @@ export const diagnosisStreamService = async (symptoms, onMessage, onComplete, on
                 'Accept': 'text/event-stream',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ symptoms })
+            body: JSON.stringify({ q: symptoms })
         });
         
         if (!response.ok) {
@@ -173,17 +210,34 @@ export const diagnosisStreamService = async (symptoms, onMessage, onComplete, on
                 if (line.startsWith('data:')) {
                     const data = line.slice(5).trim();
                     if (data === '[DONE]') {
-                        onComplete && onComplete();
+                        await complete();
                         return;
                     }
                     if (data) {
-                        onMessage && onMessage(data);
+                        let event;
+                        try {
+                            event = JSON.parse(data);
+                        } catch (parseError) {
+                            console.warn('忽略无法解析的 Agent SSE 事件', parseError);
+                            continue;
+                        }
+
+                        if (event.type !== 'text') continue;
+
+                        // tcm_merge 返回累计文本；对外转换成现有组件使用的增量文本。
+                        const cumulativeText = String(event.data || '');
+                        let delta = cumulativeText;
+                        if (cumulativeText.startsWith(fullText)) {
+                            delta = cumulativeText.slice(fullText.length);
+                        }
+                        fullText = cumulativeText;
+                        await emitIncrementally(delta);
                     }
                 }
             }
         }
-        
-        onComplete && onComplete();
+
+        await complete();
     } catch (error) {
         onError && onError(error);
     }
